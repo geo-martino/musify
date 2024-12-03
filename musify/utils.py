@@ -40,7 +40,10 @@ class SafeDict(dict):
 ###########################################################################
 ## String
 ###########################################################################
-def strip_ignore_words(value: str, words: Iterable[str] | None = frozenset({"The", "A"})) -> tuple[bool, str]:
+IGNORE_WORDS_DEFAULT = frozenset({"The", "A"})
+
+
+def strip_ignore_words(value: str, words: Iterable[str] | None = IGNORE_WORDS_DEFAULT) -> tuple[bool, str]:
     """
     Remove ignorable words from the beginning of a string.
 

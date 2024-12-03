@@ -38,6 +38,7 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Changed
 -------
 * Drop replacement characters from ends of filename when assigning ``path`` to :py:class:`.LocalTrack`
+* May now define custom ignore words when sorting string values using the :py:class:`.ItemSorter`
 
 Fixed
 -----

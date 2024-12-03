@@ -15,7 +15,7 @@ from musify.field import Field
 from musify.processors.base import Processor
 from musify.processors.exception import SorterProcessorError
 from musify.types import MusifyEnum
-from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value
+from musify.utils import flatten_nested, strip_ignore_words, to_collection, limit_value, IGNORE_WORDS_DEFAULT
 
 
 class ShuffleMode(MusifyEnum):
@@ -52,18 +52,26 @@ class ItemSorter(Processor):
     :param shuffle_weight: The weights (between -1 and 1) to apply to certain shuffling modes.
         This value will automatically be limited to within the valid range -1 and 1.
         Only used when no ``fields`` are given and shuffle_mode is not None or ``RANDOM``.
+    :param ignore_words: The words to ignore at the beginning of a string when sorting string values.
     """
 
-    __slots__ = ("sort_fields", "shuffle_mode", "shuffle_weight")
+    __slots__ = ("sort_fields", "shuffle_mode", "shuffle_weight", "ignore_words")
 
     @classmethod
-    def sort_by_field(cls, items: list[MusifyItem], field: Field | None = None, reverse: bool = False) -> None:
+    def sort_by_field(
+            cls,
+            items: list[MusifyItem],
+            field: Field | None = None,
+            reverse: bool = False,
+            ignore_words: Iterable[str] = IGNORE_WORDS_DEFAULT
+    ) -> None:
         """
         Sort items by the values of a given field.
 
         :param items: List of items to sort
         :param field: Tag or property to sort on. If None and reverse is True, reverse the order of the list.
         :param reverse: If true, reverse the order of the sort.
+        :param ignore_words: The words to ignore at the beginning of a string when sorting string values.
         """
         if field is None:
             if reverse:
@@ -89,7 +97,8 @@ class ItemSorter(Processor):
                 value = t[tag_name]
                 return value.timestamp() if value is not None else 0.0
         elif isinstance(example_value, str):  # key strips ignore words from string
-            sort_key: Callable[[MusifyItem], (bool, str)] = lambda t: strip_ignore_words(t[tag_name])
+            type sort_type = Callable[[MusifyItem], (bool, str)]
+            sort_key: sort_type = lambda t: strip_ignore_words(t[tag_name], words=ignore_words)
         else:
             sort_key: Callable[[MusifyItem], object] = lambda t: t[tag_name] if t[tag_name] else 0
 
@@ -130,7 +139,8 @@ class ItemSorter(Processor):
             self,
             fields: UnitSequence[Field | None] | Mapping[Field | None, bool] = (),
             shuffle_mode: ShuffleMode | None = None,
-            shuffle_weight: float = 0.0
+            shuffle_weight: float = 0.0,
+            ignore_words: Iterable[str] = IGNORE_WORDS_DEFAULT
     ):
         fields = to_collection(fields, list) if isinstance(fields, Field) else fields
         self.sort_fields: dict[Field | None, bool] = {field: False for field in fields} \
@@ -138,6 +148,7 @@ class ItemSorter(Processor):
 
         self.shuffle_mode = shuffle_mode
         self.shuffle_weight = limit_value(shuffle_weight, floor=-1, ceil=1)
+        self.ignore_words = ignore_words
 
     def __call__(self, *args, **kwargs) -> None:
         return self.sort(*args, **kwargs)
@@ -148,7 +159,9 @@ class ItemSorter(Processor):
             return
 
         if self.sort_fields:
-            items_nested = self._sort_by_fields({None: items}, fields=self.sort_fields)
+            items_nested = self._sort_by_fields(
+                {None: items}, fields=self.sort_fields, ignore_words=self.ignore_words
+            )
             items.clear()
             items.extend(flatten_nested(items_nested))
         elif self.shuffle_mode == ShuffleMode.RANDOM:
@@ -210,14 +223,15 @@ class ItemSorter(Processor):
 
     @classmethod
     def _sort_by_fields(
-            cls, items_grouped: MutableMapping, fields: MutableMapping[Field | None, bool]
+            cls,
+            items_grouped: MutableMapping, fields: MutableMapping[Field | None, bool],
+            ignore_words: Iterable[str] = IGNORE_WORDS_DEFAULT
     ) -> MutableMapping:
         """
         Sort items by the given fields recursively in the order given.
 
         :param items_grouped: Map of items grouped by the last sort value.
-        :param fields: Map of ``{<tag/property>: <reversed>}``.
-            If reversed is True, sort the ``tag/property`` in reverse.
+        :param ignore_words: The words to ignore at the beginning of a string when sorting string values.
         :return: Map of grouped and sorted items.
         """
         field, reverse = next(iter(fields.items()), (None, None))
@@ -229,8 +243,9 @@ class ItemSorter(Processor):
 
         # sort each group and recurse through each field for each group
         for i, (key, items) in enumerate(items_grouped.items(), 1):
-            cls.sort_by_field(items=items, field=field, reverse=reverse)
-            items_grouped[key] = cls._sort_by_fields(cls.group_by_field(items, field=field), fields=fields)
+            cls.sort_by_field(items=items, field=field, reverse=reverse, ignore_words=ignore_words)
+            groups = cls.group_by_field(items, field=field)
+            items_grouped[key] = cls._sort_by_fields(groups, fields=fields, ignore_words=ignore_words)
 
         return items_grouped
 
