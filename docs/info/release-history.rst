@@ -69,6 +69,7 @@ Changed
   when writing track tags on :py:class:`.LocalTrack`
 * Simplified ``dict`` output from :py:class:`.FilterComparers`
 * Field names displayed as lower case in ``dict`` output on relevant :py:class:`.PrettyPrinter` implementations
+* Expand logging for results from saving tracks on local collections
 
 Fixed
 -----
