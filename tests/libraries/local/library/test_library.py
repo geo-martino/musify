@@ -137,7 +137,6 @@ class TestLocalLibrary(LocalLibraryTester):
     def test_merge_playlists_updates_no_parent(
             self, library: LocalLibrary, merge_playlists_updated_paths: list[LocalPlaylist]
     ):
-        print([pl.name for pl in merge_playlists_updated_paths])
         # paths update using just filename
         self.assert_merge_playlists(
             library, test=merge_playlists_updated_paths, new_playlists=merge_playlists_updated_paths
@@ -147,7 +146,6 @@ class TestLocalLibrary(LocalLibraryTester):
             assert not str(pl.path).startswith(str(library.playlist_folder))  # did not modify original playlist
 
             pl_lib = library.playlists[pl.name]
-            print(str(pl_lib.path), str(library.playlist_folder))
             assert str(pl_lib.path).startswith(str(library.playlist_folder))
             assert str(pl_lib.path.relative_to(library.playlist_folder)) == pl.path.name
 

@@ -42,6 +42,12 @@ class MusifyObject(AttributePrinter, metaclass=ABCMeta):
     def __init__(self):
         self._clean_tags: dict[TagField, Any] = {}
 
+    def __eq__(self, item: MusifyObject):
+        return self.name == item.name
+
+    def __ne__(self, item: MusifyObject):
+        return not self.__eq__(item)
+
     def __lt__(self, other: MusifyObject):
         return self.name < other.name
 
@@ -71,13 +77,7 @@ class MusifyItem(MusifyObject, metaclass=ABCMeta):
         raise NotImplementedError
 
     def __eq__(self, item: MusifyItem):
-        """URI attributes equal if both have a URI, names equal otherwise"""
-        if self.has_uri and item.has_uri:
-            return self.uri == item.uri
-        return self.name == item.name
-
-    def __ne__(self, item: MusifyItem):
-        return not self.__eq__(item)
+        return self.has_uri and item.has_uri and self.uri == item.uri
 
     def __getitem__(self, key: str | TagField) -> Any:
         """Get the value of a given attribute key"""

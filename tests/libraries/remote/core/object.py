@@ -10,7 +10,8 @@ from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.base import RemoteItem
 from musify.libraries.remote.core.object import RemoteTrack, RemoteCollection, RemotePlaylist
-from tests.libraries.core.collection import MusifyCollectionTester, PlaylistTester
+from tests.libraries.core.collection import MusifyCollectionTester
+from tests.libraries.core.object import PlaylistTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.remote.core.utils import RemoteMock
 

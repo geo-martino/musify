@@ -3,6 +3,8 @@ Core abstract classes for the :py:mod:`Remote` module.
 
 These define the foundations of any remote object or item.
 """
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
@@ -113,6 +115,9 @@ class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):
     def __hash__(self):
         """Uniqueness of a remote object is its URI"""
         return hash(self.uri)
+
+    def __eq__(self, item: RemoteObject):
+        return self.uri == item.uri
 
 
 class RemoteItem(RemoteObject, MusifyItem, metaclass=ABCMeta):

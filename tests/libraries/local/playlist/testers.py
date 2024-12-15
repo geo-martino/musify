@@ -4,7 +4,7 @@ from abc import ABCMeta
 import pytest
 
 from musify.libraries.local.track import LocalTrack, load_track
-from tests.libraries.core.collection import PlaylistTester
+from tests.libraries.core.object import PlaylistTester
 from tests.libraries.local.track.testers import LocalCollectionTester
 from tests.libraries.local.utils import path_track_all
 

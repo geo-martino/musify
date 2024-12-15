@@ -32,6 +32,15 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.2.2
+=====
+
+Changed
+-------
+* :py:class:`.Track` implementations no longer match on name only. This avoids over matching that was noticed
+  when running :py:meth:`.LocalCollection.merge_tracks`.
+
+
 1.2.1
 =====
 

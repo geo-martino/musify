@@ -11,7 +11,7 @@ from musify.base import MusifyItem
 from musify.libraries.core.object import Playlist
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteTrack
-from tests.libraries.core.collection import LibraryTester
+from tests.libraries.core.object import LibraryTester
 from tests.libraries.local.track.utils import random_tracks
 from tests.libraries.remote.core.object import RemoteCollectionTester
 from tests.libraries.remote.core.utils import RemoteMock

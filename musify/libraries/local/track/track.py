@@ -301,6 +301,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
 
     @property
     def filename(self):
+        """The filename without extension."""
         return super().filename
 
     @filename.setter
@@ -590,7 +591,6 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         return super().__hash__()
 
     def __eq__(self, item: MusifyItem):
-        """Paths equal if both are LocalItems, URI attributes equal if both have a URI, names equal otherwise"""
         if hasattr(item, "path"):
             return self.path == item.path
         return super().__eq__(item)
