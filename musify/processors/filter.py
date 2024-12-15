@@ -32,13 +32,14 @@ class FilterDefinedList[T: str | Path | MusifyObject](Filter[T], Collection[T]):
 
     def process(self, values: Collection[T] | None = None, *_, **__) -> Collection[T]:
         """Returns all ``values`` that match this filter's settings"""
-        if self.ready:
-            matches = [value for value in values if self.transform(value) in self.values]
-            if isinstance(self.values, Sequence):
-                matches = sorted((self.values.index(self.transform(match)), match) for match in matches)
-                return [match[1] for match in matches]
-            return matches
-        return values
+        if not self.ready:
+            return values
+
+        matches = [value for value in values if self.transform(value) in self.values]
+        if isinstance(self.values, Sequence):
+            matches = sorted((self.values.index(self.transform(match)), match) for match in matches)
+            return [match[1] for match in matches]
+        return matches
 
     def as_dict(self) -> dict[str, Any]:
         return {"values": self.values}
