@@ -35,9 +35,10 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 1.2.5
 =====
 
-Changed
--------
-* :py:func:`.get_max_width` extracts name when collection of :py:class:`.MusifyObject` given
+Fixed
+-----
+* :py:meth:`.RemoteLibrary.log_sync` now correctly gets max width from results
+  when :py:class:`.RemotePlaylist` is given in results
 
 
 1.2.4

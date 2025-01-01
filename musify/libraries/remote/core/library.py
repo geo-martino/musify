@@ -512,7 +512,7 @@ class RemoteLibrary[
         if not isinstance(results, Mapping):
             results = {"": results}
 
-        max_width = get_max_width(results)
+        max_width = get_max_width({pl.name if isinstance(pl, RemotePlaylist) else pl for pl in results})
 
         self.logger.stat(f"\33[1;96mSync {self.api.source} playlists' stats: \33[0m")
         for pl, result in results.items():
