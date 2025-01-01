@@ -503,7 +503,7 @@ class RemoteLibrary[
 
         return playlists
 
-    def log_sync(self, results: SyncResultRemotePlaylist | Mapping[str, SyncResultRemotePlaylist]) -> None:
+    def log_sync(self, results: SyncResultRemotePlaylist | Mapping[str | RemotePlaylist, SyncResultRemotePlaylist]) -> None:
         """Log stats from the results of a ``sync`` operation"""
         if not results:
             return
@@ -513,9 +513,12 @@ class RemoteLibrary[
         max_width = get_max_width(results)
 
         self.logger.stat(f"\33[1;96mSync {self.api.source} playlists' stats: \33[0m")
-        for name, result in results.items():
+        for pl, result in results.items():
+            if isinstance(pl, RemotePlaylist):
+                pl = pl.name
+
             self.logger.stat(
-                f"\33[97m{align_string(name, max_width=max_width)} \33[0m|"
+                f"\33[97m{align_string(pl, max_width=max_width)} \33[0m|"
                 f"\33[96m{result.start:>6} initial \33[0m|"
                 f"\33[92m{result.added:>6} added \33[0m|"
                 f"\33[91m{result.removed:>6} removed \33[0m|"
