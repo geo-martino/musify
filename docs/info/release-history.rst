@@ -32,6 +32,14 @@ The format is based on `Keep a Changelog <https://keepachangelog.com/en>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_
 
 
+1.2.5
+=====
+
+Changed
+-----
+* :py:func:`.get_max_width` extracts name when collection of :py:class:`.MusifyObject` given
+
+
 1.2.4
 =====
 

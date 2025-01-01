@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 
 from aiorequestful.types import Number
 
+from musify.base import MusifyObject
 from musify.exception import MusifyTypeError, MusifyImportError
 
 
@@ -125,6 +126,8 @@ def get_max_width(values: Collection[Any], min_width: int = 15, max_width: int =
     """
     if len(values) == 0:
         return min_width
+
+    values = {val.name if isinstance(val, MusifyObject) else val for val in values}
     max_len = unicode_len(max(map(str, values), key=unicode_len))
     return limit_value(value=max_len + 1, floor=min_width, ceil=max_width)
 
