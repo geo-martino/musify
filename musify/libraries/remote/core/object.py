@@ -42,6 +42,9 @@ class RemoteCollectionLoader[T: RemoteObject](RemoteCollection[T], RemoteItem, m
     __slots__ = ()
     __attributes_classes__ = (RemoteObject, RemoteCollection)
 
+    def __hash__(self):
+        return hash(self.uri)
+
     def __eq__(self, __collection: RemoteObject | MusifyCollection | Iterable[T]):
         if isinstance(__collection, RemoteObject):
             return self.uri == __collection.uri
@@ -122,6 +125,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
     @abstractmethod
     def owner_id(self) -> str:
         """The ID of the owner of this playlist"""
+        self.__eq__()
         raise NotImplementedError
 
     @property
