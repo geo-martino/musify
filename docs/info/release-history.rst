@@ -36,7 +36,7 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 =====
 
 Changed
------
+-------
 * :py:func:`.get_max_width` extracts name when collection of :py:class:`.MusifyObject` given
 
 
