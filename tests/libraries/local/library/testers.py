@@ -5,7 +5,7 @@ from typing import Any
 from musify.libraries.local.library import LocalLibrary
 from musify.libraries.local.playlist.m3u import SyncResultM3U
 from musify.libraries.local.playlist.xautopf import SyncResultXAutoPF
-from tests.libraries.core.collection import LibraryTester
+from tests.libraries.core.object import LibraryTester
 from tests.libraries.local.track.testers import LocalCollectionTester
 
 

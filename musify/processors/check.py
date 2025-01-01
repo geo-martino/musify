@@ -400,16 +400,19 @@ class RemoteItemChecker(InputProcessor):
         )
 
         source = self._playlist_check_collections[name]
+        source_uris = {item.uri for item in source}
         source_valid = [item for item in source if item.has_uri]
 
         pl_original = self._playlist_originals[name]
+        pl_original_uris = {item.uri for item in pl_original}
         remote_response = next(iter(await self.api.get_items(pl_original.url, extend=True)))
         remote = self.factory.playlist(response=remote_response)
         remote_valid = [item for item in remote if item.has_uri]
+        remote_valid_uris = {item.uri for item in remote_valid}
 
-        added = [item for item in remote_valid if item not in source and item not in pl_original]
+        added = [item for item in remote_valid if item.uri not in source_uris and item.uri not in pl_original_uris]
         removed = [
-            item for item in source_valid if item not in remote_valid and item not in pl_original
+            item for item in source_valid if item.uri not in remote_valid_uris and item.uri not in pl_original_uris
         ] if not self._remaining else []
         missing = self._remaining or [item for item in source if item.has_uri is None]
 
@@ -425,7 +428,7 @@ class RemoteItemChecker(InputProcessor):
                 if remote_counts.get(uri) != count:
                     missing.extend([item for item in source_valid if item.uri == uri])
 
-        discount = sum(1 for item in remote if item in pl_original and item in source)
+        discount = sum(1 for item in remote if item.uri in pl_original_uris and item.uri in source_uris)
         self.matcher.log([name, f"{len(added):>6} items added"])
         self.matcher.log([name, f"{len(removed):>6} items removed"])
         self.matcher.log([name, f"{len(missing):>6} items in source missing URI"])

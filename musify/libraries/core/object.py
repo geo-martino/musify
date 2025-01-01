@@ -169,6 +169,25 @@ class Track(MusifyItem, HasLength, metaclass=ABCMeta):
         """The rating for this track"""
         raise NotImplementedError
 
+    def __hash__(self):
+        # If a class overrides __eq__, it must override __hash__ alongside it.
+        # https://stackoverflow.com/questions/74664008/python-typeerror-unhashable-type-when-inheriting-from-subclass-with-hash
+        # https://github.com/python/cpython/issues/46488
+        return super().__hash__()
+
+    def __eq__(self, item: Track):
+        if super().__eq__(item):  # attempt to match on URI first
+            return True
+
+        if not isinstance(item, Track):
+            return False
+
+        # match on track properties as last resort
+        self_artists = {artist if isinstance(artist, str) else artist.name for artist in self.artists}
+        item_artists = {artist if isinstance(artist, str) else artist.name for artist in item.artists}
+
+        return self.title == item.title and self_artists & item_artists and self.album == item.album
+
 
 class Playlist[T: Track](MusifyCollection[T], metaclass=ABCMeta):
     """A playlist of items and their derived properties/objects."""

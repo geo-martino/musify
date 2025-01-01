@@ -14,9 +14,9 @@ from musify.libraries.core.object import Track
 from musify.libraries.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.types import RemoteObjectType
+from tests.libraries.core.object import TrackTester
 from tests.libraries.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.libraries.remote.spotify.utils import random_uri
-from tests.testers import MusifyItemTester
 from tests.utils import path_txt, random_str
 
 try:
@@ -200,7 +200,7 @@ def test_loaded_attributes_common(track: LocalTrack):
     assert not track._reader.read_images()  # images are always cleared to save memory
 
 
-class TestLocalTrack(MusifyItemTester):
+class TestLocalTrack(TrackTester):
     """Run generic tests for :py:class:`LocalTrack` implementations"""
 
     @pytest.fixture
@@ -212,12 +212,43 @@ class TestLocalTrack(MusifyItemTester):
         return next(iter([await load_track(path) for path in path_track_all if path != track.path]))
 
     @pytest.fixture
+    async def item_equal_properties(self, track: LocalTrack) -> LocalTrack:
+        track = copy(track)
+        track.uri = random_uri(kind=RemoteObjectType.TRACK)
+        return track
+
+    @pytest.fixture
+    async def item_unequal_properties(self, track: LocalTrack, tmp_path: Path) -> LocalTrack:
+        track = copy(track)
+        track.title = "new title"
+        track.artist = "new artist"
+        track.uri = random_uri(kind=RemoteObjectType.TRACK)
+        track._path = tmp_path.joinpath("folder", track.path.name)
+
+        return track
+
+    @pytest.fixture
     def item_modified(self, track: LocalTrack) -> MusifyItem:
         track = copy(track)
         track.title = "new title"
         track.artist = "new artist"
         track.uri = random_uri(kind=RemoteObjectType.TRACK)
         return track
+
+    def test_equality_on_path(self, track: LocalTrack, tmp_path: Path):
+        track_equal = copy(track)
+        track_equal.title = "new title"
+        track_equal.artist = "new artist"
+        track_equal.uri = random_uri(kind=RemoteObjectType.TRACK)
+
+        assert hash(track) == hash(track_equal)
+        assert track_equal == track_equal
+
+        track_unequal = copy(track_equal)
+        track_unequal._path = tmp_path.joinpath("folder", track.path.name)
+
+        assert hash(track) != hash(track_unequal)
+        assert track != track_unequal
 
     def test_init_fails(self, track: LocalTrack):
         paths = [path for path in path_track_all if not all(path == ext for ext in track.valid_extensions)]
