@@ -503,7 +503,9 @@ class RemoteLibrary[
 
         return playlists
 
-    def log_sync(self, results: SyncResultRemotePlaylist | Mapping[str | RemotePlaylist, SyncResultRemotePlaylist]) -> None:
+    def log_sync(
+            self, results: SyncResultRemotePlaylist | Mapping[str | RemotePlaylist, SyncResultRemotePlaylist]
+    ) -> None:
         """Log stats from the results of a ``sync`` operation"""
         if not results:
             return
