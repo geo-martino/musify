@@ -37,6 +37,14 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 
 Fixed
 -----
+* :py:meth:`.RemoteLibrary.log_tracks` now displays correct counts
+
+
+1.2.5
+=====
+
+Fixed
+-----
 * :py:meth:`.RemoteLibrary.log_sync` now correctly gets max width from results
   when :py:class:`.RemotePlaylist` is given in results
 
