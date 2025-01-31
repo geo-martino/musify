@@ -385,7 +385,7 @@ def spotify_mock() -> SpotifyMock:
 async def spotify_api(spotify_mock: SpotifyMock) -> SpotifyAPI:
     """Yield an authorised :py:class:`SpotifyAPI` object"""
     token = {"access_token": "fake access token", "token_type": "Bearer", "scope": "test-read"}
-    # disable any token tests by settings test_* kwargs as appropriate
+    # disable any token tests by setting tester as appropriate
     api = SpotifyAPI()
     api.handler.authoriser.response.replace(token)
     api.handler.authoriser.tester.response_test = None
