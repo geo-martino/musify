@@ -252,8 +252,7 @@ class RemoteLibrary[
         self.logger.debug("Enrich tracks not implemented for this library, skipping...")
 
     def log_tracks(self) -> None:
-        playlist_tracks = [track.uri for tracks in self.playlists.values() for track in tracks]
-        in_playlists = sum(1 for track in self.tracks if track.uri in playlist_tracks)
+        in_playlists = len(self.tracks_in_playlists)
         album_tracks = [track.uri for tracks in self.albums for track in tracks]
         in_albums = sum(1 for track in self.tracks if track.uri in album_tracks)
 
@@ -262,7 +261,7 @@ class RemoteLibrary[
             f"\33[1;96m{"USER'S " + self.api.source.upper() + " TRACKS":<{width}}\33[1;0m |"
             f"\33[92m{in_playlists:>7} in playlists  \33[0m|"
             f"\33[92m{in_albums:>7} in saved albums \33[0m|"
-            f"\33[1;94m{len(self.tracks):>7} total tracks \33[0m"
+            f"\33[1;94m{len(self.tracks) + in_playlists:>7} total tracks \33[0m"
         )
 
     ###########################################################################
