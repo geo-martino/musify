@@ -236,7 +236,7 @@ def merge_maps[T: MutableMapping](source: T, new: Mapping, extend: bool = True, 
     :param new: The new map with values to update for the source map.
     :param extend: When a value is a list and a list is already present in the source map, extend the list when True.
         When False, only replace the list if overwrite is True.
-    :param overwrite: When True, overwrite any value in the source list destructively.
+    :param overwrite: When True, overwrite any value in the source destructively.
     :return: The updated dict.
     """
     def is_collection(value: Any) -> bool:
