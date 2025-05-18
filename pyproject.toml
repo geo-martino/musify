@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling", "versioningit"]
+requires = ["hatchling", "versioningit~=3.1.2"]
 build-backend = "hatchling.build"
 
 [project]
@@ -28,10 +28,10 @@ dependencies = [
     "aiorequestful~=1.0.20",
     "python-dateutil~=2.9.0",
     "Pillow~=11.2.1",
+    "pydantic~=2.11.4",
 ]
 
 [project.optional-dependencies]
-# optional functionality
 all = [
     "musify[bars,musicbee,sqlite]",
 ]
@@ -46,10 +46,19 @@ sqlite = [
     "aiorequestful[sqlite]~=1.0.20",
 ]
 
-# dev dependencies
-build = [
-    "hatch~=1.14.1",
-    "versioningit~=3.1.2",
+[project.urls]
+"Documentation" = "https://geo-martino.github.io/musify/"
+"Release Notes" = "https://geo-martino.github.io/musify/info/release-history.html"
+"Contribute" = "https://geo-martino.github.io/musify/info/contributing.html"
+"Source code" = "https://github.com/geo-martino/musify"
+Issues = "https://github.com/geo-martino/musify/issues"
+
+[dependency-groups]
+dev = [
+    "flake8",
+    "grip",
+    "jupyterlab",
+    "ipywidgets",
 ]
 test = [
     "musify[all]",
@@ -62,7 +71,6 @@ test = [
     "pycountry~=24.6.1",
 ]
 docs = [
-    "musify[build]",
     "sphinx~=8.2.3",
     "sphinx-rtd-theme~=3.0.2",
     "graphviz~=0.20.3",
@@ -72,20 +80,9 @@ docs = [
     "matplotlib~=3.10.1",
     "sphinx-new-tab-link~=0.8.0",
 ]
-dev = [
-    "musify[test,docs]",
-    "flake8",
-    "grip",
-    "jupyterlab",
-    "ipywidgets",
-]
 
-[project.urls]
-"Documentation" = "https://geo-martino.github.io/musify/"
-"Release Notes" = "https://geo-martino.github.io/musify/info/release-history.html"
-"Contribute" = "https://geo-martino.github.io/musify/info/contributing.html"
-"Source code" = "https://github.com/geo-martino/musify"
-Issues = "https://github.com/geo-martino/musify/issues"
+[tool.uv]
+default-groups = ["dev", "test", "docs"]
 
 [tool.hatch.version]
 source = "versioningit"
@@ -101,9 +98,6 @@ dirty = "{base_version}"
 #dirty = "{base_version}+d{build_date:%Y%m%d}"
 distance-dirty = "{base_version}"
 #distance-dirty = "{next_version}.dev{distance}+{vcs}{rev}.d{build_date:%Y%m%d}"
-
-[tool.hatch.build.targets.sdist]
-include = ["musify"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
