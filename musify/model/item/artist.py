@@ -1,15 +1,15 @@
-from typing import ClassVar
+from typing import ClassVar, Any
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 
-from musify._types import Resource, StrippedString
-from musify.model.item.genre import HasGenres
+from musify._types import StrippedString
+from musify.model.item.genre import HasGenres, Genre
 from musify.model.properties import HasName, HasSeparableTags, HasRating
 
 
-class Artist(HasGenres, HasName, HasRating):
+class Artist[GT: Genre](HasGenres[GT], HasName, HasRating):
     """Represents an artist item and its properties."""
-    type: ClassVar[Resource] = Resource.ARTIST
+    type: ClassVar[str] = "artist"
 
     name: StrippedString = Field(
         description="The name of this artist.",
@@ -21,7 +21,16 @@ class HasArtists[T: Artist](HasSeparableTags):
     artists: list[T] | None = Field(
         description="The artists associated with this resource.",
         default_factory=list,
+        validation_alias="artist",
     )
+
+    # noinspection PyNestedDecorators
+    @field_validator("artists", mode="before", check_fields=True)
+    @classmethod
+    def _from_string(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        return cls._separate_tags(value)
 
     @computed_field(description="A string representation of all artists featured on this resource")
     @property

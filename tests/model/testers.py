@@ -16,7 +16,14 @@ class MusifyResourceTester(MusifyModelTester, metaclass=ABCMeta):
         if model.__unique_attributes__:
             assert isinstance(self, UniqueKeyTester), "Unique keys are configured but UniqueKeyTester is not enabled"
         else:
-            assert not isinstance(self, UniqueKeyTester), "Unique keys are not configured but UniqueKeyTester is enabled"
+            assert not isinstance(self, UniqueKeyTester), \
+                "Unique keys are not configured but UniqueKeyTester is enabled"
+
+    @staticmethod
+    def test_check_unique_keys(model: MusifyResource):
+        """Test that the unique keys are set correctly"""
+        assert not model.__unique_attributes__, "Unique attributes are not set on the test model"
+        assert model.unique_keys == {id(model)}, "ID not found in unique keys"
 
 
 class UniqueKeyTester(MusifyModelTester, metaclass=ABCMeta):
@@ -24,7 +31,7 @@ class UniqueKeyTester(MusifyModelTester, metaclass=ABCMeta):
     def test_check_unique_keys(model: MusifyResource):
         """Test that the unique keys are set correctly"""
         assert model.__unique_attributes__, "Unique attributes are not set on the test model"
-        assert model.unique_keys, "Unique keys are not set on the test model"
+        assert len(model.unique_keys) > 1, "Unique keys not found"
 
         for key in model.__unique_attributes__:
             if (value := getattr(model, key, None)) is None:

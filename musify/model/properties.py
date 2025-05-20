@@ -21,7 +21,7 @@ from pydantic import Field, computed_field, PositiveInt, PositiveFloat, model_va
 from pydantic_core.core_schema import ValidatorFunctionWrapHandler
 from yarl import URL
 
-from musify._types import String, StrippedString, RemoteSource, Resource
+from musify._types import String, StrippedString
 from musify.exception import MusifyValueError
 from musify.model._base import MusifyModel, MusifyRootModel, _AttributeModel
 
@@ -30,6 +30,14 @@ class HasName(_AttributeModel):
     name: StrippedString = Field(
         description="A name for this object"
     )
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @staticmethod
+    def _from_name(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        return dict(name=value)
 
     def __lt__(self, other: Self):
         return self.name < other.name
@@ -48,7 +56,7 @@ class HasSeparableTags(_AttributeModel):
     """Represents a resource that has a tag separator."""
     _tag_sep: ClassVar[String] = PrivateAttr(
         # description="The separator used to separate tags in this resource.",
-        default=", ",
+        default="; ",
     )
 
     @classmethod
@@ -62,7 +70,7 @@ class HasSeparableTags(_AttributeModel):
 
 class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
     """Stores a URI for a resource from a specific remote repository."""
-    _source: ClassVar[RemoteSource] = PrivateAttr(
+    _source: ClassVar[str] = PrivateAttr(
         # description=(
         #     "The remote repository that the URI is from. "
         #     "This is used to validate incoming URI values belong to this repository."
@@ -79,14 +87,14 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
     # noinspection PyNestedDecorators
     @field_validator("source", mode="after", check_fields=True)
     @classmethod
-    def _validate_source(cls, source: RemoteSource) -> RemoteSource:
+    def _validate_source(cls, source: str) -> str:
         if source != cls._source:
             raise ValueError(f"Given URI does not belong to this repository type. Must be {cls._source}, not {source}")
         return source
 
     @computed_field(description="The remote repository that this URI is from.")
     @abstractmethod
-    def source(self) -> RemoteSource:
+    def source(self) -> str:
         raise NotImplementedError
 
     @computed_field(description="The type of resource this URI represents.")
@@ -171,7 +179,7 @@ class HasImmutableURI(_AttributeModel):
 
 
 class HasMutableURI(_AttributeModel):
-    source: RemoteSource | None = Field(
+    source: str | None = Field(
         description=(
             "The type of remote repository this item is associated with. "
             "Used to determine which URI to return from the `uri` attribute."
@@ -254,6 +262,14 @@ class Position(MusifyModel):
         description="The total number of resources in the parent resource.",
         default=None,
     )
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @staticmethod
+    def _from_number(value: Any) -> Any:
+        if not isinstance(value, int | float):
+            return value
+        return dict(number=int(value))
 
     @model_validator(mode="after")
     def _validate_position_is_less_than_total(self) -> Self:

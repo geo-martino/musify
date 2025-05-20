@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 from aioresponses import aioresponses, CallbackResult
 from faker import Faker
+from pydantic import TypeAdapter
 
 from musify.model import MusifyModel, MusifyRootModel
 from musify.model.properties import HasName, HasSeparableTags, Position, Length, SparseDate, KeySignature, ImageLink
@@ -16,6 +17,11 @@ class TestHasName(MusifyResourceTester):
     @pytest.fixture
     def model(self) -> MusifyModel:
         return HasName(name="Test Name")
+
+    def test_from_name(self, faker: Faker):
+        name = faker.word()
+        model = TypeAdapter(HasName).validate_python(name)
+        assert model.name == name
 
     def test_rich_comparison_dunder_methods(self) -> None:
         assert HasName(name="Test Name") == HasName(name="Test Name")
@@ -44,6 +50,12 @@ class TestPosition(MusifyModelTester):
     @pytest.fixture
     def model(self) -> MusifyModel:
         return Position()
+
+    def test_from_number(self, faker: Faker):
+        number = faker.random_int(1, 10)
+        model = TypeAdapter(Position).validate_python(number)
+        assert model.number == number
+        assert model.total is None
 
     def test_number_cannot_exceed_total(self, model: Position) -> None:
         model.total = 5

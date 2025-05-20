@@ -8,7 +8,7 @@ from musify.exception import MusifyKeyError, MusifyTypeError, MusifyValueError
 from musify.model import MusifyResource
 
 
-class MusifyMapping[KT, VT: MusifyResource](Mapping[KT | VT, VT]):
+class MusifyMapping[TK, TV: MusifyResource](Mapping[TK | TV, TV]):
     """Stores :py:class:`MusifyResource` items mapped according to their unique keys."""
     # noinspection PyUnusedLocal
     @classmethod
@@ -30,7 +30,7 @@ class MusifyMapping[KT, VT: MusifyResource](Mapping[KT | VT, VT]):
         )
 
     @classmethod
-    def _construct(cls, value: Self | Iterable[VT] | Mapping[Any, VT]) -> Self:
+    def _construct(cls, value: Self | Iterable[TV] | Mapping[Any, TV]) -> Self:
         if isinstance(value, cls):
             return value
         if isinstance(value, MusifyResource):
@@ -42,17 +42,17 @@ class MusifyMapping[KT, VT: MusifyResource](Mapping[KT | VT, VT]):
         raise MusifyTypeError(f"Unrecognised value type: {value!r}")
 
     @property
-    def items(self) -> Mapping[KT | VT, VT]:
+    def items(self) -> Mapping[TK | TV, TV]:
         """The items in this collection"""
         return self._items
 
-    def __init__(self, items: Iterable[VT] = None):
+    def __init__(self, items: Iterable[TV] = None):
         if items is None:
             items = ()
         elif isinstance(items, Mapping):
             items = items.values()
 
-        self._items: dict[KT | VT, VT] = {key: item for item in items for key in item.unique_keys}
+        self._items: dict[TK | TV, TV] = {key: item for item in items for key in item.unique_keys}
 
     def __repr__(self):
         return repr(self.items)
@@ -75,14 +75,14 @@ class MusifyMapping[KT, VT: MusifyResource](Mapping[KT | VT, VT]):
     def __ne__(self, other: Self):
         return not self.__eq__(other)
 
-    def __contains__(self, __item: KT | VT):
+    def __contains__(self, __item: TK | TV):
         if isinstance(__item, MusifyResource):
             return any(key in self._items for key in __item.unique_keys)
         if isinstance(__item, Hashable) and __item in self._items:
             return True
         return any(__item == i for i in self._items.values())
 
-    def __getitem__(self, __key: KT | VT) -> VT:
+    def __getitem__(self, __key: TK | TV) -> TV:
         if isinstance(__key, MusifyResource):
             try:
                 return next(self._items[key] for key in __key.unique_keys if key in self._items)
@@ -98,9 +98,9 @@ class MusifyMapping[KT, VT: MusifyResource](Mapping[KT | VT, VT]):
         return self.__class__(self._items.copy())
 
 
-class MusifyMutableMapping[KT, VT: MusifyResource](MusifyMapping[KT, VT], MutableMapping[KT | VT, VT]):
+class MusifyMutableMapping[TK, TV: MusifyResource](MusifyMapping[TK, TV], MutableMapping[TK | TV, TV]):
     """Stores :py:class:`MusifyResource` items mapped according to their unique keys."""
-    def __setitem__(self, __key: KT | VT, __value: VT):
+    def __setitem__(self, __key: TK | TV, __value: TV):
         """Replace the item at a given ``__key`` with the given ``__value``."""
         if not isinstance(__value, MusifyResource):
             raise MusifyValueError("Value given must be a valid musify resource.")
@@ -108,7 +108,7 @@ class MusifyMutableMapping[KT, VT: MusifyResource](MusifyMapping[KT, VT], Mutabl
         for key in __value.unique_keys:
             self._items[key] = __value
 
-    def __delitem__(self, __key: KT | VT):
+    def __delitem__(self, __key: TK | TV):
         if isinstance(__key, MusifyResource):
             if not any(key in self._items for key in __key.unique_keys):
                 raise MusifyKeyError(
@@ -121,14 +121,14 @@ class MusifyMutableMapping[KT, VT: MusifyResource](MusifyMapping[KT, VT], Mutabl
 
         del self._items[__key]
 
-    def add(self, __item: VT) -> None:
+    def add(self, __item: TV) -> None:
         """Add an item to this mapping"""
         if not isinstance(__item, MusifyResource):
             raise MusifyValueError("Item given must be a valid musify resource.")
         for key in __item.unique_keys:
             self._items[key] = __item
 
-    def update(self, __m: Iterable[VT] | Mapping[KT | VT], **kwargs) -> None:
+    def update(self, __m: Iterable[TV] | Mapping[TK | TV], **kwargs) -> None:
         """Merge this mapping with another mapping or iterable of items"""
         if isinstance(__m, Mapping):
             __m = __m.values()
@@ -136,6 +136,6 @@ class MusifyMutableMapping[KT, VT: MusifyResource](MusifyMapping[KT, VT], Mutabl
         __items_iter = ((key, item) for item in __m for key in item.unique_keys)
         self._items.update(dict(__items_iter))
 
-    def remove(self, __item: KT | VT) -> None:
+    def remove(self, __item: TK | TV) -> None:
         """Remove one item from this mapping"""
         del self[__item]

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from pydantic import Field, computed_field
 
 from musify._types import StrippedString
@@ -5,8 +7,10 @@ from musify.model.item.track import Track, HasTracks
 from musify.model.properties import HasName, HasLength
 
 
-class Folder[KT, VT: Track](HasTracks[KT, VT], HasName, HasLength):
+class Folder[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength):
     """Represents a folder collection and its properties."""
+    type: ClassVar[str] = "folder"
+
     name: StrippedString = Field(
         description="The name of this folder.",
         alias="folder",

@@ -16,8 +16,10 @@ from musify.model.item.track import Track, HasTracks
 type LibraryMergeType[T] = Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]]
 
 
-class Library[KT, VT: Track, KP, VP: Playlist](HasTracks[KT, VT], HasPlaylists[KP, VP], metaclass=ABCMeta):
+class Library[TK, TV: Track, KP, VP: Playlist](HasTracks[TK, TV], HasPlaylists[KP, VP], metaclass=ABCMeta):
     """A library of items and playlists and other object types."""
+    type: ClassVar[str] = "library"
+
     source: ClassVar[Source] = Field(
         description="The name of the source of this library.",
     )
@@ -36,7 +38,7 @@ class Library[KT, VT: Track, KP, VP: Playlist](HasTracks[KT, VT], HasPlaylists[K
         return len(tracks)
 
     @property
-    def tracks_in_playlists(self) -> list[VT]:
+    def tracks_in_playlists(self) -> list[TV]:
         """All unique tracks from all playlists in this library"""
         tracks = []
         seen_keys = set()
@@ -79,7 +81,7 @@ class Library[KT, VT: Track, KP, VP: Playlist](HasTracks[KT, VT], HasPlaylists[K
         """Log stats on currently loaded playlists"""
         raise NotImplementedError
 
-    def merge_playlists(self, playlists: LibraryMergeType[VT], reference: LibraryMergeType[VT] | None = None) -> None:
+    def merge_playlists(self, playlists: LibraryMergeType[TV], reference: LibraryMergeType[TV] | None = None) -> None:
         """
         Merge playlists from given list/map/library to this library.
 
@@ -92,7 +94,7 @@ class Library[KT, VT: Track, KP, VP: Playlist](HasTracks[KT, VT], HasPlaylists[K
             this playlist based on the reference. Useful for using this function as a synchronizer
             where the reference refers to the playlist at the previous sync.
         """
-        def get_playlists_map(value: LibraryMergeType[VT]) -> Mapping[str, Playlist[T]]:
+        def get_playlists_map(value: LibraryMergeType[TV]) -> Mapping[str, Playlist[T]]:
             """Reformat the input playlist values to map"""
             if isinstance(value, Mapping):
                 return value

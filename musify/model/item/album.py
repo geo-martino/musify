@@ -1,17 +1,19 @@
-from typing import ClassVar
+from typing import ClassVar, Any
 
-from pydantic import Field, PositiveInt
+from pydantic import Field, PositiveInt, field_validator
 
-from musify._types import Resource, StrippedString
+from musify._types import StrippedString
 from musify.model._base import _AttributeModel
-from musify.model.item.artist import HasArtists
-from musify.model.item.genre import HasGenres
-from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDate, HasImages
+from musify.model.item.artist import HasArtists, Artist
+from musify.model.item.genre import HasGenres, Genre
+from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDate, HasImages, HasSeparableTags
 
 
-class Album(HasArtists, HasGenres, HasName, HasLength, HasRating, HasReleaseDate, HasImages):
+class Album[RT: Artist, GT: Genre](
+    HasArtists[RT], HasGenres[GT], HasName, HasLength, HasRating, HasReleaseDate, HasImages
+):
     """Represents an album item and its properties."""
-    type: ClassVar[Resource] = Resource.ALBUM
+    type: ClassVar[str] = "album"
 
     name: StrippedString = Field(
         description="The name of this album.",
@@ -38,8 +40,17 @@ class HasAlbum[T: Album](_AttributeModel):
     )
 
 
-class HasAlbums[T: Album](_AttributeModel):
-    albums: list[T] | None = Field(
+class HasAlbums[T: Album](HasSeparableTags):
+    albums: list[T] = Field(
         description="The albums associated with this resource.",
         default=None,
+        validation_alias="album",
     )
+
+    # noinspection PyNestedDecorators
+    @field_validator("albums", mode="before", check_fields=True)
+    @classmethod
+    def _from_string(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        return cls._separate_tags(value)

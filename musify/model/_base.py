@@ -3,8 +3,6 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, RootModel, Field, ConfigDict
 
-from musify._types import Resource
-
 
 class MusifyModel(BaseModel):
     """Generic base class for any Musify model."""
@@ -34,7 +32,7 @@ class MusifyRootModel[T](RootModel[T]):
 class MusifyResource(MusifyModel):
     """Generic class for storing an item."""
     __unique_attributes__: ClassVar[frozenset[str]] = frozenset()
-    type: ClassVar[Resource] = Field(description="The type of resource this is.")
+    type: ClassVar[str] = Field(description="The type of resource this is.")
 
     @cached_property
     def _unique_attribute_keys(self) -> set[str]:

@@ -9,7 +9,7 @@ from musify.exception import MusifyValueError
 from musify.model import MusifyResource, MusifyMapping, MusifyMutableMapping
 
 
-class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
+class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
     """
     Stores :py:class:`MusifyResource` items with optimisations
     to execute functionality on the sequence according to the item's unique keys.
@@ -41,18 +41,18 @@ class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
         raise MusifyValueError(f"Invalid value: {value}")
 
     @property
-    def items(self) -> list[VT]:
+    def items(self) -> list[TV]:
         """The items in this sequence"""
         return self._items
 
-    def __init__(self, items: Iterable[VT] | Mapping[Any, VT] = None):
+    def __init__(self, items: Iterable[TV] | Mapping[Any, TV] = None):
         if items is None:
             items = ()
         elif isinstance(items, Mapping):
             items = items.values()
 
-        self._items: list[VT] = list(items)
-        self._items_mapped: MusifyMutableMapping[KT, VT] = MusifyMutableMapping(self._items)
+        self._items: list[TV] = list(items)
+        self._items_mapped: MusifyMutableMapping[TK, TV] = MusifyMutableMapping(self._items)
 
     def __repr__(self):
         return repr(self.items)
@@ -75,20 +75,20 @@ class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
     def __ne__(self, other: Self):
         return not self.__eq__(other)
 
-    def __contains__(self, __item: KT | VT):
+    def __contains__(self, __item: TK | TV):
         if isinstance(__item, MusifyResource):
             return __item in self._items_mapped
         return __item in self._items_mapped
 
     @overload
     @abstractmethod
-    def __getitem__(self, index: int) -> VT: ...
+    def __getitem__(self, index: int) -> TV: ...
 
     @overload
     @abstractmethod
-    def __getitem__(self, index: slice) -> list[VT]: ...
+    def __getitem__(self, index: slice) -> list[TV]: ...
 
-    def __getitem__(self, index) -> VT | list[VT]:
+    def __getitem__(self, index) -> TV | list[TV]:
         if isinstance(index, int | slice):
             try:
                 return self._items[index]
@@ -100,7 +100,7 @@ class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
         """Return a shallow copy of this sequence"""
         return self.__class__(self._items.copy())
 
-    def intersection(self, other: Collection[VT]) -> tuple[VT, ...]:
+    def intersection(self, other: Collection[TV]) -> tuple[TV, ...]:
         """
         Return the intersection between the items in this collection and an ``other`` collection as a new list.
 
@@ -113,7 +113,7 @@ class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
 
         return tuple(filter(_match, self._items))
 
-    def difference(self, other: Collection[VT]) -> tuple[VT, ...]:
+    def difference(self, other: Collection[TV]) -> tuple[TV, ...]:
         """
         Return the difference between the items in this collection and an ``other`` collection as a new list.
 
@@ -126,7 +126,7 @@ class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
 
         return tuple(filter(_match, self._items))
 
-    def outer_difference(self, other: Iterable[VT]) -> tuple[VT, ...]:
+    def outer_difference(self, other: Iterable[TV]) -> tuple[TV, ...]:
         """
         Return the outer difference between the items in this collection and an ``other`` collection as a new list.
 
@@ -140,20 +140,20 @@ class MusifySequence[KT, VT: MusifyResource](Sequence[VT]):
         return tuple(filter(_match, other))
 
 
-class MusifyMutableSequence[KT, VT: MusifyResource](MusifySequence[KT, VT], MutableSequence[VT]):
+class MusifyMutableSequence[TK, TV: MusifyResource](MusifySequence[TK, TV], MutableSequence[TV]):
     """
     Stores :py:class:`MusifyResource` items with optimisations
     to execute functionality on the sequence according to the item's unique keys.
     """
     @overload
     @abstractmethod
-    def __setitem__(self, index: int, value: VT) -> None: ...
+    def __setitem__(self, index: int, value: TV) -> None: ...
 
     @overload
     @abstractmethod
-    def __setitem__(self, index: slice, value: Iterable[VT]) -> None: ...
+    def __setitem__(self, index: slice, value: Iterable[TV]) -> None: ...
 
-    def __setitem__(self, index: SupportsIndex, value: VT | Iterable[VT]):
+    def __setitem__(self, index: SupportsIndex, value: TV | Iterable[TV]):
         if not isinstance(value, slice | Iterable | MusifyResource) or isinstance(value, str):
             raise MusifyValueError(f"Invalid value: {value}")
 
@@ -163,7 +163,7 @@ class MusifyMutableSequence[KT, VT: MusifyResource](MusifySequence[KT, VT], Muta
         else:
             self._items_mapped.update(value)
 
-    def __delitem__(self, index: SupportsIndex | VT) -> None:
+    def __delitem__(self, index: SupportsIndex | TV) -> None:
         if isinstance(index, MusifyResource):
             self._items_mapped.remove(index)
             self._items.remove(index)
@@ -177,32 +177,32 @@ class MusifyMutableSequence[KT, VT: MusifyResource](MusifySequence[KT, VT], Muta
 
         del self._items[index]
 
-    def __add__(self, other: Iterable[VT]):
+    def __add__(self, other: Iterable[TV]):
         items = self._items.copy()
         items.extend(other)
         return items
 
-    def __iadd__(self, other: Iterable[VT]):
+    def __iadd__(self, other: Iterable[TV]):
         self.extend(other)
         return self
 
-    def __sub__(self, other: Iterable[VT]):
+    def __sub__(self, other: Iterable[TV]):
         items = self._items.copy()
         for item in other:
             items.remove(item)
         return items
 
-    def __isub__(self, other: Iterable[VT]):
+    def __isub__(self, other: Iterable[TV]):
         for item in other:
             self.remove(item)
         return self
 
-    def append(self, __object: VT) -> None:
+    def append(self, __object: TV) -> None:
         """Add an item to the end of this sequence"""
         self._items.append(__object)
         self._items_mapped.add(__object)
 
-    def extend(self, __iterable: Iterable[VT], allow_duplicates: bool = True) -> None:
+    def extend(self, __iterable: Iterable[TV], allow_duplicates: bool = True) -> None:
         """Add many items to the end of this sequence"""
         if isinstance(__iterable, MusifySequence):
             __iterable = __iterable.items
@@ -217,7 +217,7 @@ class MusifyMutableSequence[KT, VT: MusifyResource](MusifySequence[KT, VT], Muta
         self._items.extend(__iterable)
         self._items_mapped.update(dict(__items_iter))
 
-    def insert(self, __index: int, __object: VT, allow_duplicates: bool = True) -> None:
+    def insert(self, __index: int, __object: TV, allow_duplicates: bool = True) -> None:
         """Insert the item at the given index"""
         if not allow_duplicates and __object in self._items_mapped:
             return
@@ -225,7 +225,7 @@ class MusifyMutableSequence[KT, VT: MusifyResource](MusifySequence[KT, VT], Muta
         self._items.insert(__index, __object)
         self._items_mapped.add(__object)
 
-    def remove(self, __value: VT) -> None:
+    def remove(self, __value: TV) -> None:
         """Remove one item from this sequence"""
         del self[__value]
 

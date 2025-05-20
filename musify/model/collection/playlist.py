@@ -13,9 +13,9 @@ from musify.model.item.track import Track, HasTracks
 from musify.model.properties import HasName, HasLength, HasImages, SparseDate
 
 
-class Playlist[KT, VT: Track](HasTracks[KT, VT], HasName, HasLength, HasImages):
+class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength, HasImages):
     """Represents a playlist collection and its properties."""
-    type: ClassVar[Resource] = Resource.PLAYLIST
+    type: ClassVar[str] = "playlist"
 
     description: StrippedString | None = Field(
         description="The description of this playlist.",
@@ -81,9 +81,9 @@ class Playlist[KT, VT: Track](HasTracks[KT, VT], HasName, HasLength, HasImages):
         return self
 
 
-class HasPlaylists[KT, VT: Playlist](_CollectionModel):
+class HasPlaylists[TK, TV: Playlist](_CollectionModel):
     """A mixin class to add a `playlists` property to a MusifyCollection."""
-    playlists: MusifyMutableMapping[KT, VT] = Field(
+    playlists: MusifyMutableMapping[TK, TV] = Field(
         description="The playlists in this collection",
         default_factory=list,
         frozen=True,

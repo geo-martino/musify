@@ -4,17 +4,19 @@ from pydantic import Field, model_validator
 
 from musify.model import MusifyMutableSequence
 from musify.model._base import _CollectionModel
-from musify.model.item.genre import HasGenres
-from musify.model.item.artist import HasArtists
-from musify.model.item.album import HasAlbum
+from musify.model.item.genre import HasGenres, Genre
+from musify.model.item.artist import HasArtists, Artist
+from musify.model.item.album import HasAlbum, Album
 from musify.model.properties import HasName, Position, HasLength, HasRating, HasReleaseDate, \
-    HasImages, KeySignature, HasMutableURI
-from musify._types import Resource, StrippedString
+    HasImages, KeySignature
+from musify._types import StrippedString
 
 
-class Track(HasArtists, HasAlbum, HasGenres, HasName, HasLength, HasRating, HasReleaseDate, HasImages):
+class Track[RT: Artist, AT: Album, GT: Genre](
+    HasArtists[RT], HasAlbum[AT], HasGenres[GT], HasName, HasLength, HasRating, HasReleaseDate, HasImages
+):
     """Represents a track item and its properties."""
-    type: ClassVar[Resource] = Resource.TRACK
+    type: ClassVar[str] = "track"
 
     name: StrippedString = Field(
         description="The title of this track.",
@@ -74,16 +76,18 @@ class Track(HasArtists, HasAlbum, HasGenres, HasName, HasLength, HasRating, HasR
         # match on track properties as last resort
         if not self.artists or not other.artists:
             return False
+        if None in (self.album, other.album):
+            return False
 
         self_artists = {artist.name for artist in self.artists}
         item_artists = {artist.name for artist in other.artists}
 
-        return self.name == other.name and self_artists & item_artists and self.album == other.album
+        return self.name == other.name and self_artists & item_artists and self.album.name == other.album.name
 
 
-class HasTracks[KT, VT: Track](_CollectionModel):
+class HasTracks[TK, TV: Track](_CollectionModel):
     """A mixin class to add a `tracks` property to a MusifyCollection."""
-    tracks: MusifyMutableSequence[KT, VT] = Field(
+    tracks: MusifyMutableSequence[TK, TV] = Field(
         description="The tracks in this collection",
         default_factory=MusifyMutableSequence,
         frozen=True,
