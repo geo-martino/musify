@@ -3,7 +3,7 @@ Core abstract classes for the :py:mod:`Local` module.
 """
 from abc import ABCMeta
 
-from musify.base import MusifyItemSettable
+from musify.model._base import MusifyItemSettable
 from musify.file.base import File
 
 

@@ -16,8 +16,12 @@ from aiorequestful.types import UnitCollection, UnitIterable
 
 from musify.field import Fields, TagField, TagFields
 from musify.file.exception import UnexpectedPathError
-from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Track, Library, Folder, Album, Artist, Genre
+from musify.model.collection import MusifyCollection
+from musify.model.object import Library, Folder
+from musify.model.genre import Genre
+from musify.model.artist import Artist
+from musify.model.album import Album
+from musify.model.track import Track
 from musify.libraries.local.base import LocalItem
 from musify.libraries.local.exception import LocalCollectionError
 from musify.libraries.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES

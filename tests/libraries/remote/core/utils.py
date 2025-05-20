@@ -9,10 +9,11 @@ from aioresponses import aioresponses
 from aioresponses.core import RequestCall
 from yarl import URL
 
-from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType
+from musify._types import Resource
 
 ALL_ID_TYPES = RemoteIDType.all()
-ALL_ITEM_TYPES = RemoteObjectType.all()
+ALL_ITEM_TYPES = Resource.all()
 
 
 class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
@@ -39,13 +40,13 @@ class RemoteMock(aioresponses, ContextManager, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def item_type_map(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:
+    def item_type_map(self) -> dict[Resource, list[dict[str, Any]]]:
         """Map of :py:class:`RemoteObjectType` to the mocked items mapped as ``{<ID>: <item>}``"""
         raise NotImplementedError
 
     @property
     @abstractmethod
-    def item_type_map_user(self) -> dict[RemoteObjectType, list[dict[str, Any]]]:
+    def item_type_map_user(self) -> dict[Resource, list[dict[str, Any]]]:
         """Map of :py:class:`RemoteObjectType` to the mocked user items mapped as ``{<ID>: <item>}``"""
         raise NotImplementedError
 

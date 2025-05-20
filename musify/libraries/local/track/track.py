@@ -13,12 +13,12 @@ import mutagen
 from aiorequestful.types import UnitIterable
 from yarl import URL
 
-from musify.base import MusifyItem
+from musify.model._base import MusifyResource
 from musify.exception import MusifyKeyError, MusifyAttributeError, MusifyTypeError, MusifyValueError
 from musify.field import TagMap
 from musify.field import TrackField
 from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
-from musify.libraries.core.object import Track
+from musify.model.track import Track
 from musify.libraries.local.base import LocalItem
 # noinspection PyProtectedMember
 from musify.libraries.local.track._tags import TagReader, TagWriter, SyncResultTrack
@@ -590,7 +590,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         # https://github.com/python/cpython/issues/46488
         return super().__hash__()
 
-    def __eq__(self, item: MusifyItem):
+    def __eq__(self, item: MusifyResource):
         if hasattr(item, "path"):
             return self.path == item.path
         return super().__eq__(item)

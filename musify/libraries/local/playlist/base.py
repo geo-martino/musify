@@ -9,7 +9,7 @@ from typing import Any, Self
 from musify.base import Result
 from musify.file.base import File
 from musify.file.path_mapper import PathMapper
-from musify.libraries.core.object import Playlist
+from musify.model.object import Playlist
 from musify.libraries.local.collection import LocalCollection
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler

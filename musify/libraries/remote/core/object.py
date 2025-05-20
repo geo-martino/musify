@@ -11,9 +11,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Self, Literal
 
-from musify.base import MusifyItem, Result
-from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Track, Album, Playlist, Artist
+from musify.base import Result
+from musify.model._base import MusifyResource
+from musify.model.collection import MusifyCollection
+from musify.model.object import Playlist
+from musify.model.artist import Artist
+from musify.model.album import Album
+from musify.model.track import Track
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
 from musify.libraries.remote.core.exception import RemoteError, APIError
@@ -185,7 +189,7 @@ class RemotePlaylist[T: RemoteTrack](Playlist[T], RemoteCollectionLoader[T], met
 
     async def sync(
             self,
-            items: Iterable[MusifyItem] = (),
+            items: Iterable[MusifyResource] = (),
             kind: PLAYLIST_SYNC_KINDS = "new",
             reload: bool = True,
             dry_run: bool = True,

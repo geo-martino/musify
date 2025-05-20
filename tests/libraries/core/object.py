@@ -5,10 +5,11 @@ from typing import Iterable, Any
 
 import pytest
 
-from musify.base import MusifyItem
+from musify.model._base import MusifyResource
 from musify.exception import MusifyTypeError
-from musify.libraries.core.collection import MusifyCollection
-from musify.libraries.core.object import Playlist, Track, Library
+from musify.model.collection import MusifyCollection
+from musify.model.object import Playlist, Library
+from musify.model.track import Track
 from tests.libraries.core.collection import MusifyCollectionTester
 from tests.testers import MusifyItemTester
 
@@ -16,14 +17,14 @@ from tests.testers import MusifyItemTester
 class TrackTester(MusifyItemTester, metaclass=ABCMeta):
 
     @abstractmethod
-    def item_equal_properties(self, *args, **kwargs) -> MusifyItem:
+    def item_equal_properties(self, *args, **kwargs) -> MusifyResource:
         """
         Yields an :py:class:`MusifyItem` object that equals the ``item`` being tested based on properties
         """
         raise NotImplementedError
 
     @abstractmethod
-    def item_unequal_properties(self, *args, **kwargs) -> MusifyItem:
+    def item_unequal_properties(self, *args, **kwargs) -> MusifyResource:
         """
         Yields an :py:class:`MusifyItem` object that is does not equal the ``item`` being tested based on properties
         """
@@ -51,7 +52,7 @@ class PlaylistTester(MusifyCollectionTester, metaclass=ABCMeta):
 
     # noinspection PyTypeChecker
     @staticmethod
-    def test_merge_input_validation(playlist: Playlist, collection_merge_invalid: Iterable[MusifyItem]):
+    def test_merge_input_validation(playlist: Playlist, collection_merge_invalid: Iterable[MusifyResource]):
         with pytest.raises(MusifyTypeError):
             playlist.merge(collection_merge_invalid)
 
@@ -170,7 +171,7 @@ class LibraryTester(MusifyCollectionTester, metaclass=ABCMeta):
 
     @pytest.fixture
     def merge_playlists_extend(
-            self, library: Library, merge_playlists: list[Playlist], collection_merge_items: Iterable[MusifyItem]
+            self, library: Library, merge_playlists: list[Playlist], collection_merge_items: Iterable[MusifyResource]
     ) -> list[Playlist]:
         """Set of playlists that already exist in the ``library`` with extra tracks to be merged"""
         merge_playlist = merge_playlists[0]

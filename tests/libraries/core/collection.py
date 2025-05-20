@@ -4,10 +4,10 @@ from copy import deepcopy
 
 import pytest
 
-from musify.base import MusifyItem
+from musify.model._base import MusifyResource
 from musify.exception import MusifyTypeError
 from musify.libraries.collection import BasicCollection
-from musify.libraries.core.collection import MusifyCollection
+from musify.model.collection import MusifyCollection
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteCollectionLoader
 from musify.printer import PrettyPrinter
@@ -30,7 +30,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def collection_merge_items(self, *args, **kwargs) -> Iterable[MusifyItem]:
+    def collection_merge_items(self, *args, **kwargs) -> Iterable[MusifyResource]:
         """
         Yields an Iterable of :py:class:`MusifyItem` for use in :py:class:`MusifyCollection` tests
         as pytest.fixture
@@ -38,7 +38,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[MusifyItem]:
+    def collection_merge_invalid(self, *args, **kwargs) -> Iterable[MusifyResource]:
         """
         Yields an Iterable of :py:class:`MusifyItem` for use in :py:class:`MusifyCollection` tests
         as pytest.fixture
@@ -50,7 +50,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
         return collection
 
     @staticmethod
-    def test_collection_input_validation(collection: MusifyCollection, collection_merge_invalid: Iterable[MusifyItem]):
+    def test_collection_input_validation(collection: MusifyCollection, collection_merge_invalid: Iterable[MusifyResource]):
         with pytest.raises(MusifyTypeError):
             collection.index(next(c for c in collection_merge_invalid))
         with pytest.raises(MusifyTypeError):
@@ -142,7 +142,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_iterator_and_container_dunder_methods(
-            collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
+            collection: MusifyCollection, collection_merge_items: Iterable[MusifyResource]
     ):
         """:py:class:`MusifyCollection` dunder iterator and contains tests"""
         assert sum(1 for _ in collection) == len(collection.items)
@@ -155,7 +155,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @abstractmethod
     def test_collection_getitem_dunder_method(
-            self, collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
+            self, collection: MusifyCollection, collection_merge_items: Iterable[MusifyResource]
     ):
         raise NotImplementedError
 
@@ -198,7 +198,7 @@ class MusifyCollectionTester(PrettyPrinterTester, metaclass=ABCMeta):
 
     @staticmethod
     def test_collection_difference_and_intersection(
-            collection: MusifyCollection, collection_merge_items: Iterable[MusifyItem]
+            collection: MusifyCollection, collection_merge_items: Iterable[MusifyResource]
     ):
         difference = [item for item in collection_merge_items]
         other = collection.items + difference

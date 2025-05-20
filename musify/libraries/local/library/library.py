@@ -14,7 +14,7 @@ from aiorequestful.types import UnitCollection, UnitIterable
 from musify.base import Result
 from musify.exception import MusifyError
 from musify.file.path_mapper import PathMapper, PathStemMapper
-from musify.libraries.core.object import Library, LibraryMergeType
+from musify.model.object import Library, LibraryMergeType
 from musify.libraries.local.collection import LocalCollection, LocalFolder, LocalAlbum, LocalArtist, LocalGenres
 from musify.libraries.local.playlist import PLAYLIST_CLASSES, LocalPlaylist, load_playlist
 from musify.libraries.local.track import TRACK_CLASSES, LocalTrack, load_track

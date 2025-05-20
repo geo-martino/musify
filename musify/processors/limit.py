@@ -6,10 +6,11 @@ from functools import reduce
 from operator import mul
 from random import shuffle
 
-from musify.base import MusifyItem, HasLength
+from musify.model._properties import HasLength
+from musify.model._base import MusifyResource
 from musify.field import Fields
 from musify.file.base import File
-from musify.libraries.core.object import Track
+from musify.model.track import Track
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import LimiterProcessorError
 from musify.processors.sort import ItemSorter
@@ -84,7 +85,7 @@ class ItemLimiter(DynamicProcessor):
     def __call__(self, *args, **kwargs) -> None:
         return self.limit(*args, **kwargs)
 
-    def limit[T: MusifyItem](self, items: list[T], ignore: Collection[T] = ()) -> None:
+    def limit[T: MusifyResource](self, items: list[T], ignore: Collection[T] = ()) -> None:
         """
         Limit ``items`` in-place based on set conditions.
 
@@ -113,7 +114,7 @@ class ItemLimiter(DynamicProcessor):
         else:
             items.extend(self._limit_on_numeric(items_limit))
 
-    def _limit_on_albums[T: MusifyItem](self, items: MutableSequence[T]) -> list[T]:
+    def _limit_on_albums[T: MusifyResource](self, items: MutableSequence[T]) -> list[T]:
         seen_albums = []
         result = []
 
@@ -129,7 +130,7 @@ class ItemLimiter(DynamicProcessor):
 
         return result
 
-    def _limit_on_numeric[T: MusifyItem](self, items: MutableSequence[T]) -> list[T]:
+    def _limit_on_numeric[T: MusifyResource](self, items: MutableSequence[T]) -> list[T]:
         count = 0
         result = []
 
@@ -143,7 +144,7 @@ class ItemLimiter(DynamicProcessor):
 
         return result
 
-    def _convert(self, item: MusifyItem) -> float:
+    def _convert(self, item: MusifyResource) -> float:
         """
         Convert units for item length or size and return the value.
 
@@ -167,39 +168,39 @@ class ItemLimiter(DynamicProcessor):
             raise LimiterProcessorError(f"Unrecognised LimitType: {self.kind}")
 
     @dynamicprocessormethod
-    def _random(self, items: MutableSequence[MusifyItem]) -> None:
+    def _random(self, items: MutableSequence[MusifyResource]) -> None:
         shuffle(items)
 
     @dynamicprocessormethod
-    def _highest_rating(self, items: list[MusifyItem]) -> None:
+    def _highest_rating(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.RATING, reverse=True)
 
     @dynamicprocessormethod
-    def _lowest_rating(self, items: list[MusifyItem]) -> None:
+    def _lowest_rating(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.RATING)
 
     @dynamicprocessormethod
-    def _most_recently_played(self, items: list[MusifyItem]) -> None:
+    def _most_recently_played(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.LAST_PLAYED, reverse=True)
 
     @dynamicprocessormethod
-    def _least_recently_played(self, items: list[MusifyItem]) -> None:
+    def _least_recently_played(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.LAST_PLAYED)
 
     @dynamicprocessormethod
-    def _most_often_played(self, items: list[MusifyItem]) -> None:
+    def _most_often_played(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.PLAY_COUNT, reverse=True)
 
     @dynamicprocessormethod
-    def _least_often_played(self, items: list[MusifyItem]) -> None:
+    def _least_often_played(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.PLAY_COUNT)
 
     @dynamicprocessormethod
-    def _most_recently_added(self, items: list[MusifyItem]) -> None:
+    def _most_recently_added(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.DATE_ADDED, reverse=True)
 
     @dynamicprocessormethod
-    def _least_recently_added(self, items: list[MusifyItem]) -> None:
+    def _least_recently_added(self, items: list[MusifyResource]) -> None:
         ItemSorter.sort_by_field(items, Fields.DATE_ADDED)
 
     def as_dict(self):

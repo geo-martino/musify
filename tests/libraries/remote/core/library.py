@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from musify.base import MusifyItem
-from musify.libraries.core.object import Playlist
+from musify.model._base import MusifyResource
+from musify.model.object import Playlist
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteTrack
 from tests.libraries.core.object import LibraryTester
@@ -199,7 +199,7 @@ class RemoteLibraryTester(RemoteCollectionTester, LibraryTester, metaclass=ABCMe
     @staticmethod
     async def assert_sync(library: RemoteLibrary, playlists: Any, api_mock: RemoteMock):
         """Run test and assertions on library sync functionality for given input playlists data type"""
-        playlists_check: Mapping[str, Collection[MusifyItem]]
+        playlists_check: Mapping[str, Collection[MusifyResource]]
         if isinstance(playlists, RemoteLibrary):  # get map of playlists from the given library
             playlists_check = playlists.playlists
         elif isinstance(playlists, Collection) and all(isinstance(pl, Playlist) for pl in playlists):

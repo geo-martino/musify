@@ -13,7 +13,7 @@ from aiorequestful.types import URLInput
 from yarl import URL
 
 from musify.libraries.remote.core.api import RemoteAPI
-from musify.libraries.remote.core.types import RemoteObjectType
+from musify._types import Resource
 
 
 class SpotifyAPIBase(RemoteAPI[AuthorisationCodeFlow], metaclass=ABCMeta):
@@ -28,11 +28,11 @@ class SpotifyAPIBase(RemoteAPI[AuthorisationCodeFlow], metaclass=ABCMeta):
     ## Format values/responses
     ###########################################################################
     @staticmethod
-    def _format_key(key: str | RemoteObjectType | None) -> str | None:
+    def _format_key(key: str | Resource | None) -> str | None:
         """Get the expected key in a response from a :py:class:`RemoteObjectType`"""
         if key is None:
             return
-        if isinstance(key, RemoteObjectType):
+        if isinstance(key, Resource):
             key = key.name
         return key.lower().rstrip("s") + "s"
 
@@ -62,7 +62,7 @@ class SpotifyAPIBase(RemoteAPI[AuthorisationCodeFlow], metaclass=ABCMeta):
             self,
             response: MutableMapping[str, Any],
             key: str,
-            parent_key: str | RemoteObjectType | None,
+            parent_key: str | Resource | None,
             parent_response: MutableMapping[str, Any]
     ) -> None:
         """
@@ -72,7 +72,7 @@ class SpotifyAPIBase(RemoteAPI[AuthorisationCodeFlow], metaclass=ABCMeta):
         if (
                 not parent_key
                 or isinstance(parent_key, str)
-                or parent_key == RemoteObjectType.PLAYLIST
+                or parent_key == Resource.PLAYLIST
                 or self.items_key not in response
                 or self.items_key in parent_response
         ):

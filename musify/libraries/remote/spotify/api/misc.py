@@ -8,7 +8,8 @@ from typing import Any
 
 from aiorequestful.types import Number
 
-from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType
+from musify._types import Resource
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
@@ -30,7 +31,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
         key = self.collection_item_map[kind].name.lower()
 
         while kind is None:  # get user to input ID type
-            kind = RemoteObjectType.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
+            kind = Resource.from_name(input("\33[1mEnter ID type: \33[0m"))[0]
 
         id_ = self.wrangler.extract_ids(values=value, kind=kind)[0]
         url = self.wrangler.convert(id_, kind=kind, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL)
@@ -74,7 +75,7 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
             self.user_data = r
         return r
 
-    async def query(self, query: str | None, kind: RemoteObjectType, limit: int = 10) -> list[dict[str, Any]]:
+    async def query(self, query: str | None, kind: Resource, limit: int = 10) -> list[dict[str, Any]]:
         """
         ``GET: /search`` - Query for items. Modify result types returned with kind parameter
 
@@ -100,9 +101,9 @@ class SpotifyAPIMisc(SpotifyAPIBase, metaclass=ABCMeta):
 
         key = self.collection_item_map[kind].name.lower() + "s"
         totals_key = {
-            RemoteObjectType.ALBUM: "total_tracks",
-            RemoteObjectType.SHOW: "total_episodes",
-            RemoteObjectType.AUDIOBOOK: "total_chapters"
+            Resource.ALBUM: "total_tracks",
+            Resource.SHOW: "total_episodes",
+            Resource.AUDIOBOOK: "total_chapters"
         }
         for result in results:
             if key in result and self.url_key in result[key] and "total" in result[key]:

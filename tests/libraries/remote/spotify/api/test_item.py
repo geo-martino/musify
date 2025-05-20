@@ -11,7 +11,8 @@ from yarl import URL
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import APIError, RemoteObjectTypeError
 from musify.libraries.remote.core.object import RemoteCollection
-from musify.libraries.remote.core.types import RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import RemoteIDType
+from musify._types import Resource
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyPlaylist, SpotifyAlbum, SpotifyTrack
@@ -33,14 +34,14 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     ## Assertions
     ###########################################################################
     @staticmethod
-    def assert_item_types(results: list[dict[str, Any]], key: str, object_type: RemoteObjectType | None = None):
+    def assert_item_types(results: list[dict[str, Any]], key: str, object_type: Resource | None = None):
         """
         Assert all items are of the correct type by checking the result at key 'type' has value ``key``.
         Provide an ``object_type`` to apply object_type specific logic.
         """
         key = key.rstrip("s")
         for result in results:
-            if object_type == RemoteObjectType.PLAYLIST:
+            if object_type == Resource.PLAYLIST:
                 # playlist responses next items deeper under 'track' key
                 assert result[key]["type"] == key
             else:
@@ -51,7 +52,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             results: list[dict[str, Any]],
             expected: dict[str, dict[str, Any]],
             test: dict[str, dict[str, Any]] | None = None,
-            object_type: RemoteObjectType | None = None,
+            object_type: Resource | None = None,
             key: str | None = None,
     ):
         """
@@ -90,7 +91,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     async def assert_get_items_calls(
             self,
             responses: Collection[dict[str, Any]],
-            object_type: RemoteObjectType,
+            object_type: Resource,
             api: SpotifyAPI,
             api_mock: SpotifyMock,
             key: str | None = None,
@@ -100,7 +101,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         url = f"{api.url}/{object_type.name.lower()}s"
         requests = await api_mock.get_requests(url=url)
         for response in responses:
-            if limit is None or object_type in {RemoteObjectType.USER, RemoteObjectType.PLAYLIST}:
+            if limit is None or object_type in {Resource.USER, Resource.PLAYLIST}:
                 requests += await api_mock.get_requests(url=f"{url}/{response[self.id_key]}")
             if key:
                 requests += await api_mock.get_requests(url=f"{url}/{response[self.id_key]}/{key}")
@@ -121,9 +122,9 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         elif isinstance(actual, SpotifyAlbum):
             assert len(actual.tracks) == actual.track_total > len(expected.tracks)
 
-    def assert_response_enriched_with_parent(self, object_type: RemoteObjectType, key: str, response: dict[str, Any]):
+    def assert_response_enriched_with_parent(self, object_type: Resource, key: str, response: dict[str, Any]):
         """Check that the child items in the given ``response`` have been enriched with its parent response"""
-        if object_type == RemoteObjectType.PLAYLIST:
+        if object_type == Resource.PLAYLIST:
             return
 
         parent_key = object_type.name.lower()
@@ -149,7 +150,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         assert api._get_unit(key="audio-features") == "audio features"
 
     async def test_get_items_batches_limited(self, api: SpotifyAPI, api_mock: SpotifyMock):
-        key = RemoteObjectType.TRACK.name.lower() + "s"
+        key = Resource.TRACK.name.lower() + "s"
         url = f"{api.url}/{key}"
         id_list = [track[self.id_key] for track in api_mock.tracks]
         valid_limit = randrange(api_mock.limit_lower + 1, api_mock.limit_upper - 1)
@@ -167,10 +168,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     ###########################################################################
     ## Input validation
     ###########################################################################
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.ALBUM], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.ALBUM], ids=idfn)
     async def test_extend_items_input_validation(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             api: SpotifyAPI,
@@ -190,7 +191,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
                 await api.get_user_items(kind=kind)
 
         # may only get valid user item types that are not playlists from the currently authorised user
-        for kind in api.user_item_types - {RemoteObjectType.PLAYLIST}:
+        for kind in api.user_item_types - {Resource.PLAYLIST}:
             with pytest.raises(RemoteObjectTypeError):
                 await api.get_user_items(user=random_str(1, RemoteIDType.ID.value - 1), kind=kind)
 
@@ -199,7 +200,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         assert await api.extend_tracks(values=[], features=True, analysis=True) == []
 
         value = api.wrangler.convert(
-            random_id(), kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+            random_id(), kind=Resource.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
         )
         with pytest.raises(RemoteObjectTypeError):
             await api.extend_tracks(values=value, features=True)
@@ -208,7 +209,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         assert await api.get_artist_albums(values=[]) == {}
 
         value = api.wrangler.convert(
-            random_id(), kind=RemoteObjectType.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+            random_id(), kind=Resource.ALBUM, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
         )
         with pytest.raises(RemoteObjectTypeError):
             await api.get_artist_albums(values=value)
@@ -221,7 +222,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     ###########################################################################
     async def test_get_items_multi(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, dict[str, Any]],
             api: SpotifyAPI,
             api_mock: SpotifyMock
@@ -241,17 +242,17 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         assert len(requests) == len(responses)
 
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.TRACK,
-        RemoteObjectType.ALBUM,
-        RemoteObjectType.ARTIST,
-        RemoteObjectType.SHOW,
-        RemoteObjectType.EPISODE,
-        RemoteObjectType.AUDIOBOOK,
-        RemoteObjectType.CHAPTER,
+        Resource.TRACK,
+        Resource.ALBUM,
+        Resource.ARTIST,
+        Resource.SHOW,
+        Resource.EPISODE,
+        Resource.AUDIOBOOK,
+        Resource.CHAPTER,
     ], ids=idfn)
     async def test_get_items_batched(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, dict[str, Any]],
             api: SpotifyAPI,
             api_mock: SpotifyMock
@@ -276,11 +277,11 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         self.assert_params(requests=requests, params=id_params)
 
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,  RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,
+        Resource.PLAYLIST, Resource.ALBUM,  Resource.SHOW, Resource.AUDIOBOOK,
     ], ids=idfn)
     async def test_extend_items(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             api: SpotifyAPI,
@@ -307,12 +308,12 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         self.assert_response_enriched_with_parent(object_type=object_type, key=key, response=response)
 
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        Resource.PLAYLIST, Resource.ALBUM,
         # RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK,  RemoteResponse types not yet implemented for these
     ], ids=idfn)
     async def test_extend_items_on_response(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             api: SpotifyAPI,
@@ -330,11 +331,11 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM, RemoteObjectType.SHOW, RemoteObjectType.AUDIOBOOK
+        Resource.PLAYLIST, Resource.ALBUM, Resource.SHOW, Resource.AUDIOBOOK
     ], ids=idfn)
     async def test_extend_items_caches(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             api_cache: SpotifyAPI,
@@ -344,7 +345,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         method = "GET"
         response = response[key]
 
-        if object_type == RemoteObjectType.PLAYLIST:
+        if object_type == Resource.PLAYLIST:
             url = response[api_cache.items_key][0][key.rstrip("s")][self.url_key]
         else:
             url = response[api_cache.items_key][0][self.url_key]
@@ -352,7 +353,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         await repository.clear()
 
         items = [
-            item if object_type != RemoteObjectType.PLAYLIST else item[key.rstrip("s")]
+            item if object_type != Resource.PLAYLIST else item[key.rstrip("s")]
             for item in response[api_cache.items_key]
         ]
         id_list = [item[self.id_key] for item in items]
@@ -365,27 +366,27 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     ## ``get_user_items``
     ###########################################################################
     @pytest.mark.parametrize("object_type,user", [
-        (RemoteObjectType.PLAYLIST, False),
-        (RemoteObjectType.PLAYLIST, True),
-        (RemoteObjectType.TRACK, False),
-        (RemoteObjectType.ALBUM, False),
-        (RemoteObjectType.ARTIST, False),
-        (RemoteObjectType.SHOW, False),
-        (RemoteObjectType.EPISODE, False),
-        (RemoteObjectType.AUDIOBOOK, False),
+        (Resource.PLAYLIST, False),
+        (Resource.PLAYLIST, True),
+        (Resource.TRACK, False),
+        (Resource.ALBUM, False),
+        (Resource.ARTIST, False),
+        (Resource.SHOW, False),
+        (Resource.EPISODE, False),
+        (Resource.AUDIOBOOK, False),
     ], ids=idfn)
     async def test_get_user_items(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             user: bool,
             api: SpotifyAPI,
             api_mock: SpotifyMock
     ):
         test = None
         if user:
-            test = random_id_type(id_=api_mock.user_id, wrangler=api.wrangler, kind=RemoteObjectType.USER)
+            test = random_id_type(id_=api_mock.user_id, wrangler=api.wrangler, kind=Resource.USER)
             url = f"{api.url}/users/{api_mock.user_id}/{object_type.name.lower()}s"
-        elif object_type == RemoteObjectType.ARTIST:
+        elif object_type == Resource.ARTIST:
             url = f"{api.url}/me/following"
         else:
             url = f"{api.url}/me/{object_type.name.lower()}s"
@@ -395,7 +396,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
                 deepcopy(response)
             for response in api_mock.item_type_map_user[object_type]
         }
-        if object_type == RemoteObjectType.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
+        if object_type == Resource.PLAYLIST:  # ensure items block is reduced for playlist responses as expected
             for response in responses.values():
                 response["tracks"] = {
                     self.url_key: response["tracks"][self.url_key],
@@ -413,7 +414,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         assert len(requests) == api_mock.calculate_pages(limit=limit, total=total)
 
         for result in results:  # check results are as expected
-            if object_type not in {RemoteObjectType.PLAYLIST, RemoteObjectType.ARTIST}:
+            if object_type not in {Resource.PLAYLIST, Resource.ARTIST}:
                 assert "added_at" in result
                 result = result[object_type.name.lower()]
                 assert result == responses[result[self.id_key]][object_type.name.lower()]
@@ -424,20 +425,20 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
     ## ``get_items`` - tests
     ###########################################################################
     update_keys = {
-        RemoteObjectType.PLAYLIST: {"description", "followers", "images", "public"},
-        RemoteObjectType.TRACK: {"artists", "album"},
-        RemoteObjectType.ALBUM: {"artists", "copyrights", "external_ids", "genres", "label", "popularity", "tracks"},
-        RemoteObjectType.ARTIST: {"followers", "genres", "images", "popularity"},
-        RemoteObjectType.USER: {"display_name", "followers", "images", "product"},
-        RemoteObjectType.SHOW: {"copyrights", "images", "languages", "episodes"},
-        RemoteObjectType.EPISODE: {"language", "images", "languages", "show"},
-        RemoteObjectType.AUDIOBOOK: {"copyrights", "edition", "languages", "images", "chapters"},
-        RemoteObjectType.CHAPTER: {"languages", "images", "chapters"},
+        Resource.PLAYLIST: {"description", "followers", "images", "public"},
+        Resource.TRACK: {"artists", "album"},
+        Resource.ALBUM: {"artists", "copyrights", "external_ids", "genres", "label", "popularity", "tracks"},
+        Resource.ARTIST: {"followers", "genres", "images", "popularity"},
+        Resource.USER: {"display_name", "followers", "images", "product"},
+        Resource.SHOW: {"copyrights", "images", "languages", "episodes"},
+        Resource.EPISODE: {"language", "images", "languages", "show"},
+        Resource.AUDIOBOOK: {"copyrights", "edition", "languages", "images", "chapters"},
+        Resource.CHAPTER: {"languages", "images", "chapters"},
     }
 
     async def test_get_items_single_string(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             extend: bool,
             key: str,
@@ -464,7 +465,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     async def test_get_items_many_string(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, dict[str, Any]],
             extend: bool,
             key: str,
@@ -472,7 +473,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             api_mock: SpotifyMock
     ):
         limit = None
-        if object_type not in {RemoteObjectType.PLAYLIST, RemoteObjectType.USER}:
+        if object_type not in {Resource.PLAYLIST, Resource.USER}:
             limit = get_limit(responses, max_limit=api_mock.limit_max)
             assert len(responses) > limit
 
@@ -490,7 +491,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     async def test_get_items_single_mapping(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             api: SpotifyAPI,
@@ -510,7 +511,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     async def test_get_items_many_mapping(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, dict[str, Any]],
             key: str,
             api: SpotifyAPI,
@@ -528,12 +529,12 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         self.assert_get_items_results(results=results, expected=responses, test=test, key=key, object_type=object_type)
 
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        Resource.TRACK, Resource.PLAYLIST, Resource.ALBUM,
         # other RemoteResponse types not yet implemented/do not provide expected results
     ], ids=idfn)
     async def test_get_items_single_response(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             api: SpotifyAPI,
@@ -562,12 +563,12 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
     # noinspection PyTestUnpassedFixture
     @pytest.mark.parametrize("object_type", [
-        RemoteObjectType.TRACK, RemoteObjectType.PLAYLIST, RemoteObjectType.ALBUM,
+        Resource.TRACK, Resource.PLAYLIST, Resource.ALBUM,
         # other RemoteResponse types not yet implemented/do not provide expected results
     ], ids=idfn)
     async def test_get_items_many_response(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, dict[str, Any]],
             key: str,
             api: SpotifyAPI,
@@ -705,10 +706,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
 
         assert len(requests) == len(list(batched(responses, limit))) + len(responses)
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_extend_tracks_single_string(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             features: dict[str, Any],
             analysis: dict[str, Any],
@@ -716,7 +717,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             api_mock: SpotifyMock
     ):
         results = await api.extend_tracks(
-            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=RemoteObjectType.TRACK),
+            values=random_id_type(id_=response[self.id_key], wrangler=api.wrangler, kind=Resource.TRACK),
             features=True,
             analysis=True
         )
@@ -734,10 +735,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         await api.extend_tracks(values=response[self.url_key])
         await api.extend_tracks(values=response["external_urls"]["spotify"])
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_extend_tracks_many_string(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, Any],
             features_all: dict[str, dict[str, Any]],
             analysis_all: dict[str, dict[str, Any]],
@@ -745,7 +746,7 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             api_mock: SpotifyMock,
     ):
         limit = get_limit(responses, max_limit=api_mock.limit_max)
-        test = random_id_types(id_list=responses, wrangler=api.wrangler, kind=RemoteObjectType.TRACK)
+        test = random_id_types(id_list=responses, wrangler=api.wrangler, kind=Resource.TRACK)
 
         results = await api.extend_tracks(values=test, features=True, analysis=True, limit=limit)
 
@@ -754,10 +755,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             responses=responses.values(), features=True, analysis=True, api=api, api_mock=api_mock, limit=limit
         )
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_extend_tracks_single_mapping(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             features: dict[str, Any],
             analysis: dict[str, Any],
@@ -777,10 +778,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             analysis={response[self.id_key]: analysis},
         )
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_extend_tracks_many_mapping(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, Any],
             features_all: dict[str, dict[str, Any]],
             analysis_all: dict[str, dict[str, Any]],
@@ -795,10 +796,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             results=results, test=responses, features=features_all, features_in_results=False, analysis=analysis_all,
         )
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_extend_tracks_single_response(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             key: str,
             features: dict[str, Any],
@@ -825,10 +826,10 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
         )
         assert test.bpm is not None
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_extend_tracks_many_response(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             responses: dict[str, dict[str, Any]],
             key: str,
             features_all: dict[str, dict[str, Any]],
@@ -853,17 +854,17 @@ class TestSpotifyAPIItems(RemoteAPIItemTester, SpotifyAPIFixtures):
             results=results, test=responses, features=features_all, features_in_results=False, analysis=analysis_all,
         )
 
-    @pytest.mark.parametrize("object_type", [RemoteObjectType.TRACK], ids=idfn)
+    @pytest.mark.parametrize("object_type", [Resource.TRACK], ids=idfn)
     async def test_get_tracks(
             self,
-            object_type: RemoteObjectType,
+            object_type: Resource,
             response: dict[str, Any],
             api_cache: SpotifyAPI,
             api_mock: SpotifyMock,
             object_factory: SpotifyObjectFactory,
     ):
         results = await api_cache.get_tracks(
-            values=random_id_type(id_=response[self.id_key], wrangler=api_cache.wrangler, kind=RemoteObjectType.TRACK),
+            values=random_id_type(id_=response[self.id_key], wrangler=api_cache.wrangler, kind=Resource.TRACK),
             features=True,
             analysis=True
         )

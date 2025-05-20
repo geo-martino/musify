@@ -2,7 +2,10 @@ import pytest
 
 from musify.field import FolderField, PlaylistField, AlbumField, ArtistField
 from musify.field import TrackField
-from musify.libraries.core.object import Track, Playlist, Folder, Artist, Album
+from musify.model.object import Playlist, Folder
+from musify.model.artist import Artist
+from musify.model.album import Album
+from musify.model.track import Track
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
 from tests.testers import FieldTester, TagFieldTester

@@ -5,7 +5,7 @@ from collections.abc import Container
 
 import pytest
 
-from musify.base import MusifyObject, MusifyItem
+from musify.model._base import MusifyObject, MusifyResource
 from musify.field import Fields, TagField, ALL_FIELDS, Field, TagFields
 from musify.printer import PrettyPrinter
 from musify.types import MusifyEnum
@@ -135,17 +135,17 @@ class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
     """Run generic tests for :py:class:`MusifyItem` implementations"""
 
     @abstractmethod
-    def item(self, *args, **kwargs) -> MusifyItem:
+    def item(self, *args, **kwargs) -> MusifyResource:
         """Yields an :py:class:`MusifyItem` object to be tested as pytest.fixture."""
         raise NotImplementedError
 
     @abstractmethod
-    def item_unequal(self, *args, **kwargs) -> MusifyItem:
+    def item_unequal(self, *args, **kwargs) -> MusifyResource:
         """Yields an :py:class:`MusifyItem` object that is does not equal the ``item`` being tested"""
         raise NotImplementedError
 
     @abstractmethod
-    def item_modified(self, *args, **kwargs) -> MusifyItem:
+    def item_modified(self, *args, **kwargs) -> MusifyResource:
         """
         Yields an :py:class:`MusifyItem` object that is equal to the ``item``
         being tested with some modified values
@@ -153,11 +153,11 @@ class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
         raise NotImplementedError
 
     @pytest.fixture
-    def obj(self, item: MusifyItem) -> PrettyPrinter:
+    def obj(self, item: MusifyResource) -> PrettyPrinter:
         return item
 
     @staticmethod
-    def test_equality(item: MusifyItem, item_modified: MusifyItem, item_unequal: MusifyItem):
+    def test_equality(item: MusifyResource, item_modified: MusifyResource, item_unequal: MusifyResource):
         assert hash(item) == hash(item)
         assert item == item
 
@@ -168,7 +168,7 @@ class MusifyItemTester(PrettyPrinterTester, metaclass=ABCMeta):
         assert item != item_unequal
 
     @staticmethod
-    def test_getitem_dunder_method(item: MusifyItem):
+    def test_getitem_dunder_method(item: MusifyResource):
         assert item["name"] == item.name
         assert item["uri"] == item.uri
         assert item[TagFields.NAME] == item.name

@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Self
 
-from musify.base import MusifyItem, Result
+from musify.base import Result
+from musify.model._base import MusifyResource
 from musify.exception import FieldError, MusifyImportError
 from musify.field import Fields, Field, TagFields
 from musify.file.base import File
@@ -468,7 +469,7 @@ class XMLPlaylistParser(File, PrettyPrinter):
         }
 
     def parse_exception_paths(
-            self, matcher: FilterMatcher | None, items: list[File], original: list[File | MusifyItem]
+            self, matcher: FilterMatcher | None, items: list[File], original: list[File | MusifyResource]
     ) -> None:
         """
         Parse the exception paths (i.e. include/exclude attributes) for the given ``matcher``

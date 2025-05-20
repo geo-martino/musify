@@ -11,7 +11,7 @@ from typing import Any
 
 from aiorequestful.types import UnitSequence
 
-from musify.base import MusifyItem
+from musify.model._base import MusifyResource
 from musify.field import Field
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
@@ -95,7 +95,7 @@ class Comparer(DynamicProcessor, Hashable):
             raise ComparerError("No comparative item given and no expected values set")
 
         tag_name = None
-        if self.field and isinstance(item, MusifyItem):
+        if self.field and isinstance(item, MusifyResource):
             tag_name = self.field.name.lower()
             actual = item[tag_name]
         else:

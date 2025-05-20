@@ -11,7 +11,8 @@ from yarl import URL
 from musify import PROGRAM_NAME, PROGRAM_URL
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import APIError, RemoteIDTypeError
-from musify.libraries.remote.core.types import APIInputValueSingle, RemoteIDType, RemoteObjectType
+from musify.libraries.remote.core.types import APIInputValueSingle, RemoteIDType
+from musify._types import Resource
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 
@@ -23,7 +24,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
 
     async def load_user_playlists(self) -> None:
         """Load and store user playlists data for the currently authorised user in this API object"""
-        responses = await self.get_user_items(kind=RemoteObjectType.PLAYLIST)
+        responses = await self.get_user_items(kind=Resource.PLAYLIST)
         self.user_playlist_data = {response["name"]: response for response in responses}
 
     async def get_playlist_url(self, playlist: APIInputValueSingle[RemoteResponse]) -> URL:
@@ -53,14 +54,14 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             elif self.id_key in playlist:
                 url = self.wrangler.convert(
                     playlist[self.id_key],
-                    kind=RemoteObjectType.PLAYLIST,
+                    kind=Resource.PLAYLIST,
                     type_in=RemoteIDType.ID,
                     type_out=RemoteIDType.URL
                 )
             elif "uri" in playlist:
                 url = self.wrangler.convert(
                     playlist["uri"],
-                    kind=RemoteObjectType.PLAYLIST,
+                    kind=Resource.PLAYLIST,
                     type_in=RemoteIDType.URI,
                     type_out=RemoteIDType.URL
                 )
@@ -70,7 +71,7 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             return URL(url)
 
         try:
-            url = self.wrangler.convert(playlist, kind=RemoteObjectType.PLAYLIST, type_out=RemoteIDType.URL)
+            url = self.wrangler.convert(playlist, kind=Resource.PLAYLIST, type_out=RemoteIDType.URL)
         except RemoteIDTypeError:
             if not self.user_playlist_data:
                 await self.load_user_playlists()
@@ -116,13 +117,13 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
         response["owner"]["display_name"] = self.user_name
         response["owner"][self.id_key] = self.user_id
         response["owner"]["uri"] = self.wrangler.convert(
-            self.user_id, kind=RemoteObjectType.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URI
+            self.user_id, kind=Resource.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URI
         )
         response["owner"][self.url_key] = self.wrangler.convert(
-            self.user_id, kind=RemoteObjectType.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
+            self.user_id, kind=Resource.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL
         )
         response["owner"]["external_urls"][self.source.lower()] = self.wrangler.convert(
-            self.user_id, kind=RemoteObjectType.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT
+            self.user_id, kind=Resource.USER, type_in=RemoteIDType.ID, type_out=RemoteIDType.URL_EXT
         )
 
         self.handler.log("DONE", url, message=f"Created playlist: {name!r} -> {url}")
@@ -158,14 +159,14 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             self.handler.log("SKIP", url, message="No data given")
             return 0
 
-        self.wrangler.validate_item_type(items, kind=RemoteObjectType.TRACK)
+        self.wrangler.validate_item_type(items, kind=Resource.TRACK)
 
         uri_list = [
-            self.wrangler.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items
+            self.wrangler.convert(item, kind=Resource.TRACK, type_out=RemoteIDType.URI) for item in items
         ]
         if skip_dupes:  # skip tracks currently in playlist
-            pl_current = next(iter(await self.get_items(url, kind=RemoteObjectType.PLAYLIST)))
-            tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
+            pl_current = next(iter(await self.get_items(url, kind=Resource.PLAYLIST)))
+            tracks_key = self.collection_item_map[Resource.PLAYLIST].name.lower() + "s"
             tracks = pl_current[tracks_key][self.items_key]
 
             uri_current = [track["track"]["uri"] for track in tracks]
@@ -235,15 +236,15 @@ class SpotifyAPIPlaylists(SpotifyAPIBase, metaclass=ABCMeta):
             return 0
 
         if items is None:  # clear everything
-            pl_current = next(iter(await self.get_items(url, kind=RemoteObjectType.PLAYLIST, extend=True)))
+            pl_current = next(iter(await self.get_items(url, kind=Resource.PLAYLIST, extend=True)))
 
-            tracks_key = self.collection_item_map[RemoteObjectType.PLAYLIST].name.lower() + "s"
+            tracks_key = self.collection_item_map[Resource.PLAYLIST].name.lower() + "s"
             tracks = pl_current[tracks_key][self.items_key]
             uri_list = [track[tracks_key.rstrip("s")]["uri"] for track in tracks]
         else:  # clear only the items given
-            self.wrangler.validate_item_type(items, kind=RemoteObjectType.TRACK)
+            self.wrangler.validate_item_type(items, kind=Resource.TRACK)
             uri_list = [
-                self.wrangler.convert(item, kind=RemoteObjectType.TRACK, type_out=RemoteIDType.URI) for item in items
+                self.wrangler.convert(item, kind=Resource.TRACK, type_out=RemoteIDType.URI) for item in items
             ]
 
         if not uri_list:  # skip when nothing to clear
