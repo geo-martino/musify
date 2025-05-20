@@ -1,19 +1,19 @@
 from abc import ABCMeta, abstractmethod
 
-from musify.model import MusifyModel, MusifyResource
+from musify.model import MusifyModel, MusifyRootModel, MusifyResource
 
 
 class MusifyModelTester(metaclass=ABCMeta):
     @abstractmethod
-    def model(self) -> MusifyModel:
+    def model(self, **kwargs) -> MusifyModel | MusifyRootModel:
         """Fixture for the model to test"""
         raise NotImplementedError
 
 
 class MusifyResourceTester(MusifyModelTester, metaclass=ABCMeta):
-    def test_check_unique_key_tester_enabled(self, handler: MusifyResource):
+    def test_check_unique_key_tester_enabled(self, model: MusifyResource):
         """Test that the unique key tester is enabled"""
-        if handler.__unique_attributes__:
+        if model.__unique_attributes__:
             assert isinstance(self, UniqueKeyTester), "Unique keys are configured but UniqueKeyTester is not enabled"
         else:
             assert not isinstance(self, UniqueKeyTester), "Unique keys are not configured but UniqueKeyTester is enabled"
@@ -37,3 +37,9 @@ class UniqueKeyTester(MusifyModelTester, metaclass=ABCMeta):
                 assert value not in model.unique_keys, f"Value {value} should not be in unique keys after removing it"
             except ValueError:  # value is not nullable
                 pass
+
+
+class RemoteURITester(UniqueKeyTester, metaclass=ABCMeta):
+    pass  # TODO: should test Has*URI objects too
+
+

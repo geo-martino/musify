@@ -10,9 +10,12 @@ from __future__ import annotations
 import re
 from abc import ABCMeta, abstractmethod
 from datetime import date
+from http import HTTPMethod
+from io import BytesIO
 from typing import Self, Annotated, Any, ClassVar
 
-from PIL.Image import Image
+import aiohttp
+from PIL import Image
 from pydantic import Field, computed_field, PositiveInt, PositiveFloat, model_validator, field_validator, PrivateAttr, \
     InstanceOf
 from pydantic_core.core_schema import ValidatorFunctionWrapHandler
@@ -48,11 +51,13 @@ class HasSeparableTags(_AttributeModel):
         default=", ",
     )
 
-    def _join_tags(self, tags: list[Any]) -> str:
-        return self._tag_sep.join(map(str, tags))
+    @classmethod
+    def _join_tags(cls, tags: list[Any]) -> str:
+        return cls._tag_sep.join(map(str, tags))
 
-    def _separate_tags(self, tags: str) -> list[str]:
-        return [tag.strip() for tag in tags.split(self._tag_sep) if tag.strip()]
+    @classmethod
+    def _separate_tags(cls, tags: str) -> list[str]:
+        return [tag.strip() for tag in tags.split(cls._tag_sep) if tag.strip()]
 
 
 class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
@@ -252,6 +257,9 @@ class Position(MusifyModel):
 
     @model_validator(mode="after")
     def _validate_position_is_less_than_total(self) -> Self:
+        if self.number is None or self.total is None:
+            return self
+
         if self.number > self.total:
             raise MusifyValueError("Start position cannot be greater than end position.")
         return self
@@ -261,28 +269,27 @@ class Length(MusifyRootModel[PositiveInt | PositiveFloat]):
     # noinspection PyNestedDecorators
     @field_validator("root", mode="before", check_fields=True)
     @staticmethod
-    def _convert_numeric_representation_to_number(value: Any) -> int | float:
+    def _convert_numeric_representation_to_number(value: Any) -> str | int | float:
         if not isinstance(value, str):
             return value
 
-        if re.match(value, r"^\d+$"):
-            return int(value)
-        if re.match(value, r"^\d+\.\d+$"):
-            return float(value)
+        # skip string values that are purely numeric, let pydantic handle them
+        if re.match(r"^\d+$", value) or re.match(r"^\d+\.\d+$", value):
+            return value
 
-        if matches := re.match(value, r"^(\d{1,2}):(\d{1,2})[$|\.\d+$]"):
+        if matches := re.match(r"^(\d{2}):(\d{2})(?:$|\.\d+$)", value):
             hours = 0
             minutes, seconds = tuple(map(int, matches.groups()))
-        elif matches := re.match(value, r"^\d+:\d{1,2}:\d{1,2}[$|\.\d+$]"):
+        elif matches := re.match(r"^(\d+):(\d{2}):(\d{2})(?:$|\.\d+$)", value):
             hours, minutes, seconds = tuple(map(int, matches.groups()))
         else:
             raise MusifyValueError(f"Invalid length format: {value}")
 
         total_seconds = seconds + (minutes * 60) + (hours * 3600)
 
-        if matches := re.match(value, r"^.*\.(\d+)$]"):
-            milliseconds = int(matches.group(1))
-            return float(total_seconds + (milliseconds / 1000))
+        if matches := re.match(r"^.*\.(\d+)$", value):
+            milliseconds = int(matches.group(1)) / (10 ** len(matches.group(1)))
+            return float(total_seconds + milliseconds)
 
         return total_seconds
 
@@ -365,6 +372,14 @@ class ImageLink(MusifyModel):
         default=None,
     )
 
+    # noinspection PyNestedDecorators
+    @field_validator("url", mode="before", check_fields=True)
+    @staticmethod
+    def _convert_to_url(value: str) -> Any:
+        if not isinstance(value, str):
+            return value
+        return URL(value)
+
     def __str__(self) -> str:
         return str(self.url)
 
@@ -376,7 +391,7 @@ class ImageLink(MusifyModel):
             return True
         if not self.__eq_kind(other):
             return False
-        return self.url == other.url or (self.height == other.height and self.width == other.width)
+        return self.url == other.url
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -393,10 +408,20 @@ class ImageLink(MusifyModel):
     def __ge__(self, other):
         return self.__eq_kind(other) and self.height >= other.height and self.width >= other.width
 
+    async def load(self, session: aiohttp.ClientSession = None) -> Image:
+        """Load the image from the URL."""
+        if session is None:
+            session = aiohttp.ClientSession()
+
+        async with session.request(method=HTTPMethod.GET, url=self.url) as response:
+            image_bytes = await response.read()
+
+        return Image.open(BytesIO(image_bytes))
+
 
 class HasImages(_AttributeModel):
     """Represents a resource that has associated images."""
-    images: list[InstanceOf[Image] | ImageLink] = Field(
+    images: list[InstanceOf[Image.Image] | ImageLink] = Field(
         description="Images associated with this track.",
         default_factory=list,
     )
@@ -404,7 +429,9 @@ class HasImages(_AttributeModel):
 
 class KeySignature(MusifyModel):
     """Represents a key signature."""
-    _root_notes = ("C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B")
+    _root_notes: ClassVar[tuple[str, ...]] = (
+        "C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"
+    )
 
     root: Annotated[int, Field(ge=0, le=11)] = Field(
         description="An index representing the root note of the key of this track.",
@@ -416,13 +443,17 @@ class KeySignature(MusifyModel):
     # noinspection PyNestedDecorators
     @field_validator("root", mode="before", check_fields=True)
     @classmethod
-    def _get_root_index_from_key(cls, value: str) -> int:
+    def _get_root_index_from_key(cls, value: str) -> Any:
+        if not isinstance(value, str):
+            return value
         return cls._root_notes.index(value.rstrip("m"))
 
     # noinspection PyNestedDecorators
-    @field_validator("root", mode="before", check_fields=True)
+    @field_validator("mode", mode="before", check_fields=True)
     @classmethod
-    def _get_mode_index_from_key(cls, value: str) -> int:
+    def _get_mode_index_from_key(cls, value: str) -> Any:
+        if not isinstance(value, str):
+            return value
         return int(value.endswith("m"))
 
     @computed_field(description="A string representation of the key in alphabetical musical notation format.")
