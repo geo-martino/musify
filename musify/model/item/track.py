@@ -2,14 +2,14 @@ from typing import ClassVar, Self
 
 from pydantic import Field, model_validator
 
+from musify._types import StrippedString
 from musify.model import MusifyMutableSequence
 from musify.model._base import _CollectionModel
-from musify.model.item.genre import HasGenres, Genre
-from musify.model.item.artist import HasArtists, Artist
 from musify.model.item.album import HasAlbum, Album
+from musify.model.item.artist import HasArtists, Artist
+from musify.model.item.genre import HasGenres, Genre
 from musify.model.properties import HasName, Position, HasLength, HasRating, HasReleaseDate, \
     HasImages, KeySignature
-from musify._types import StrippedString
 
 
 class Track[RT: Artist, AT: Album, GT: Genre](

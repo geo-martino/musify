@@ -99,7 +99,7 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
 
     @computed_field(description="The type of resource this URI represents.")
     @abstractmethod
-    def type(self) -> Resource:
+    def type(self) -> str:
         raise NotImplementedError
 
     @computed_field(description="The unique identifier for this URI.")
@@ -109,7 +109,7 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def from_id[T](cls, id_: str, kind: Resource) -> T:
+    def from_id(cls, value: str, kind: str) -> Self:
         raise NotImplementedError
 
     @computed_field(description="The URL of the API endpoint for this remote resource.")

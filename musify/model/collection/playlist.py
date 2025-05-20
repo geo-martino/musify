@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Iterable
 from copy import deepcopy
-from typing import Iterable, Self, ClassVar
+from typing import Self, ClassVar
 
 from pydantic import Field
 
-from musify._types import Resource, StrippedString
+from musify._types import StrippedString
 from musify.exception import MusifyTypeError
 from musify.model import MusifyMutableMapping
 from musify.model._base import _CollectionModel
@@ -30,8 +31,7 @@ class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength, HasImages):
         default=None,
     )
 
-    # TODO: test everything here again
-    def merge(self, other: Iterable[T], reference: Self | None = None) -> None:
+    def merge(self, other: Collection[TV], reference: Self | None = None) -> None:
         """
         Merge tracks in this playlist with another collection, synchronising tracks between the two.
         Only modifies this playlist.
@@ -59,25 +59,11 @@ class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength, HasImages):
 
         self.extend(reference.outer_difference(other), allow_duplicates=False)
 
-    def __or__(self, other: Playlist[T]) -> Self:
-        if not isinstance(other, self.__class__):
-            raise MusifyTypeError(
-                f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
-                f"as it is not a {self.__class__.__name__}"
-            )
+    def __or__(self, other: Iterable[TV]) -> Self:
+        return deepcopy(self).merge(other)
 
-        self_copy = deepcopy(self)
-        self_copy.merge(other.tracks)
-        return self_copy
-
-    def __ior__(self, other: Playlist[T]) -> Self:
-        if not isinstance(other, self.__class__):
-            raise MusifyTypeError(
-                f"Incorrect item given. Cannot merge with {other.__class__.__name__} "
-                f"as it is not a {self.__class__.__name__}"
-            )
-
-        self.merge(other.tracks)
+    def __ior__(self, other: Iterable[TV]) -> Self:
+        self.merge(other)
         return self
 
 
