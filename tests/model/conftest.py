@@ -32,7 +32,7 @@ def models(
 def tracks(faker: Faker) -> list[Track]:
     return [
         Track(name=faker.sentence(nb_words=faker.random_int(1, 5)))
-        for _ in range(faker.random_int(5, 10))
+        for _ in range(faker.random_int(15, 30))
     ]
 
 

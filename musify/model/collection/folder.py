@@ -20,4 +20,5 @@ class Folder[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength):
     @computed_field(description="Folder is considered a compilation if over 50% of tracks are marked as compilation.")
     @property
     def compilation(self) -> bool:
-        return (sum(track.album.compilation is True for track in self.tracks) / len(self.tracks)) > 0.5
+        compilation_iter = (track.album.compilation is True for track in self.tracks if track.album is not None)
+        return (sum(compilation_iter) / len(self.tracks)) > 0.5
