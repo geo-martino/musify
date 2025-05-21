@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import ClassVar, Any
 
-from pydantic import Field, field_validator, computed_field
+from pydantic import Field, field_validator, computed_field, PositiveInt
 
 from musify._types import StrippedString
 from musify.model._base import _AttributeModel, writeable_computed_field, abstract_property
@@ -27,11 +27,13 @@ class _Album[RT: Artist, GT: Genre](
     track_total = computed_field(
         abstract_property(),
         description="The total number of tracks on this album",
+        return_type=PositiveInt | None,
     )
     # noinspection PyArgumentList
     disc_total = computed_field(
         abstract_property(),
         description="The total number of discs for this album",
+        return_type=PositiveInt | None,
     )
 
 
