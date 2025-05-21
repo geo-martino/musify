@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from abc import ABCMeta, abstractmethod
+from collections.abc import Iterable
 from datetime import date
 from http import HTTPMethod
 from io import BytesIO
@@ -17,13 +18,13 @@ from typing import Self, Annotated, Any, ClassVar
 import aiohttp
 from PIL import Image
 from pydantic import Field, computed_field, PositiveInt, PositiveFloat, model_validator, field_validator, PrivateAttr, \
-    InstanceOf
+    InstanceOf, validate_call
 from pydantic_core.core_schema import ValidatorFunctionWrapHandler
 from yarl import URL
 
 from musify._types import String, StrippedString
 from musify.exception import MusifyValueError
-from musify.model._base import MusifyModel, MusifyRootModel, _AttributeModel
+from musify.model._base import MusifyModel, MusifyRootModel, _AttributeModel, readable_computed_field
 
 
 class HasName(_AttributeModel):
@@ -60,7 +61,7 @@ class HasSeparableTags(_AttributeModel):
     )
 
     @classmethod
-    def _join_tags(cls, tags: list[Any]) -> str:
+    def _join_tags(cls, tags: Iterable[Any]) -> str:
         return cls._tag_sep.join(map(str, tags))
 
     @classmethod
@@ -158,27 +159,35 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
             other = str(other)
 
         if isinstance(other, str):
-            return self.uri == str
+            return self.uri == other or self.id == other
 
-        return False
+        return super().__eq__(other)
 
 
-class HasImmutableURI(_AttributeModel):
+class HasURI[T: RemoteURI](_AttributeModel):
     __unique_attributes__ = frozenset({"uri"})
+    __uri = PrivateAttr(default=None)
 
-    uri: RemoteURI = Field(
+    @computed_field(
         description="The URI for this resource on the remote repository"
     )
+    @property
+    def uri(self) -> T | None:
+        return self.__uri
 
-    def __eq__(self, other: HasImmutableURI | HasMutableURI):
+    def __eq__(self, other: HasURI):
+        if not isinstance(other, HasURI):
+            return super().__eq__(other)
         if self is other:
             return True
         if isinstance(other, HasMutableURI) and not other.has_uri:
             return False
-        return self.uri == other.uri
+        return self.uri is not None and other.uri is not None and self.uri == other.uri
 
 
-class HasMutableURI(_AttributeModel):
+class HasMutableURI(HasURI):
+    __unique_attributes__ = frozenset({"uri"})
+
     source: str | None = Field(
         description=(
             "The type of remote repository this item is associated with. "
@@ -207,9 +216,6 @@ class HasMutableURI(_AttributeModel):
             raise MusifyValueError(f"Duplicate URIs found from sources: {', '.join(duplicates)}")
         return uris
 
-    __unique_attributes__ = frozenset({"uri"})
-
-    @computed_field(description="The associated URI from the remote repository if it exists.")
     @property
     def uri(self) -> RemoteURI | None:
         if self.source is None:
@@ -217,6 +223,7 @@ class HasMutableURI(_AttributeModel):
         return next((uri for uri in self.uris if uri.source == self.source and uri.exists), None)
 
     @uri.setter
+    @validate_call
     def uri(self, uri: str | RemoteURI):
         if isinstance(uri, str):
             uri = RemoteURI(uri)
@@ -242,14 +249,10 @@ class HasMutableURI(_AttributeModel):
     def has_uri(self) -> bool | None:
         return next((uri.exists for uri in self.uris if uri.source == self.source), None)
 
-    def __eq__(self, other: HasImmutableURI | HasMutableURI):
-        if self is other:
-            return True
-        if not self.has_uri:
-            return False
+    def __eq__(self, other: HasURI):
         if isinstance(other, HasMutableURI) and not other.has_uri:
             return False
-        return self.uri == other.uri
+        return super().__eq__(other)
 
 
 class Position(MusifyModel):
@@ -405,9 +408,9 @@ class ImageLink(MusifyModel):
     def __eq__(self, other: Self) -> bool:
         if self is other:
             return True
-        if not self.__eq_kind(other):
-            return False
-        return self.url == other.url
+        if not isinstance(other, ImageLink):
+            return super().__eq__(other)
+        return self.kind == other.kind and self.url == other.url
 
     def __ne__(self, other):
         return not self.__eq__(other)

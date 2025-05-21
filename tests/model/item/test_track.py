@@ -6,10 +6,10 @@ from faker import Faker
 from musify.model import MusifyModel
 from musify.model.item.album import Album
 from musify.model.item.track import Track, HasTracks, HasMutableTracks
-from tests.model.testers import MusifyResourceTester
+from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
 
-class TestTrack(MusifyResourceTester):
+class TestTrack(UniqueKeyTester):
     @pytest.fixture
     def model(self, faker: Faker) -> MusifyModel:
         return Track(name=faker.sentence())
@@ -47,7 +47,7 @@ class TestTrack(MusifyResourceTester):
     def test_equality(self, faker: Faker):
         track = Track(name=faker.sentence(), artist=faker.word(), album=faker.word())
         track_equal = Track(name=track.name, artist=track.artist, album=track.album)
-        assert track != track_equal, "Tracks should be equal"
+        assert track == track_equal, "Tracks should be equal"
 
         track_different_name = Track(name=faker.sentence(), artist=track.artist, album=track.album)
         assert track != track_different_name, "Tracks with different names should not be equal"

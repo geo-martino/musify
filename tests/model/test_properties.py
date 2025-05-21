@@ -24,7 +24,6 @@ class TestHasName(MusifyResourceTester):
         assert model.name == name
 
     def test_rich_comparison_dunder_methods(self) -> None:
-        assert HasName(name="Test Name") == HasName(name="Test Name")
         assert HasName(name="Test Name") < HasName(name="Zest Name")
         assert HasName(name="Test Name") <= HasName(name="Zest Name")
         assert HasName(name="Test Name") > HasName(name="Rest Name")

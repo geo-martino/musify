@@ -7,11 +7,11 @@ from musify._types import StrippedString
 from musify.model._base import _AttributeModel, writeable_computed_field, abstract_property
 from musify.model.item.artist import HasArtists, Artist
 from musify.model.item.genre import HasGenres, Genre
-from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDate, HasImages, HasSeparableTags
+from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDate, HasImages, HasSeparableTags, HasURI
 
 
 class _Album[RT: Artist, GT: Genre](
-    ABC, HasArtists[RT], HasGenres[GT], HasName, HasLength, HasRating, HasReleaseDate, HasImages
+    ABC, HasArtists[RT], HasGenres[GT], HasName, HasURI, HasLength, HasRating, HasReleaseDate, HasImages
 ):
     type: ClassVar[str] = "album"
 

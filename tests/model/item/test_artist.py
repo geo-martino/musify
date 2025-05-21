@@ -3,10 +3,10 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.item.artist import Artist, HasArtists
-from tests.model.testers import MusifyResourceTester
+from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
 
-class TestArtist(MusifyResourceTester):
+class TestArtist(UniqueKeyTester):
     @pytest.fixture
     def model(self, faker: Faker) -> MusifyModel:
         return Artist(name=faker.word())

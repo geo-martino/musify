@@ -47,6 +47,6 @@ class UniqueKeyTester(MusifyModelTester, metaclass=ABCMeta):
 
 
 class RemoteURITester(UniqueKeyTester, metaclass=ABCMeta):
-    pass  # TODO: should test Has*URI objects too
+    pass  # TODO: and add tests for Has*URI objects too
 
 

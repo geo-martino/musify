@@ -9,11 +9,11 @@ from musify.model.item.album import HasAlbum, Album
 from musify.model.item.artist import HasArtists, Artist
 from musify.model.item.genre import HasGenres, Genre
 from musify.model.properties import HasName, Position, HasLength, HasRating, HasReleaseDate, \
-    HasImages, KeySignature
+    HasImages, KeySignature, HasURI
 
 
 class Track[RT: Artist, AT: Album, GT: Genre](
-    HasArtists[RT], HasAlbum[AT], HasGenres[GT], HasName, HasLength, HasRating, HasReleaseDate, HasImages
+    HasArtists[RT], HasAlbum[AT], HasGenres[GT], HasName, HasURI, HasLength, HasRating, HasReleaseDate, HasImages
 ):
     """Represents a track item and its properties."""
     type: ClassVar[str] = "track"
@@ -72,6 +72,8 @@ class Track[RT: Artist, AT: Album, GT: Genre](
             return True
         if not isinstance(other, Track):
             return False
+        if super().__eq__(other):
+            return True
 
         # match on track properties as last resort
         if not self.artists or not other.artists:

@@ -84,7 +84,7 @@ class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
         if self is other:
             return True
         elif not isinstance(other, self.__class__):
-            return False
+            return super().__eq__(other)
 
         return self._items == other._items
 

@@ -4,10 +4,10 @@ from pydantic import Field, computed_field, field_validator
 
 from musify._types import StrippedString
 from musify.model.item.genre import HasGenres, Genre
-from musify.model.properties import HasName, HasSeparableTags, HasRating
+from musify.model.properties import HasName, HasSeparableTags, HasRating, HasURI
 
 
-class Artist[GT: Genre](HasGenres[GT], HasName, HasRating):
+class _Artist[GT: Genre](HasGenres[GT], HasName, HasURI, HasRating):
     """Represents an artist item and its properties."""
     type: ClassVar[str] = "artist"
 
@@ -15,6 +15,10 @@ class Artist[GT: Genre](HasGenres[GT], HasName, HasRating):
         description="The name of this artist.",
         alias="artist",
     )
+
+
+class Artist[GT: Genre](_Artist[GT]):
+    pass
 
 
 class HasArtists[T: Artist](HasSeparableTags):
@@ -35,4 +39,4 @@ class HasArtists[T: Artist](HasSeparableTags):
     @computed_field(description="A string representation of all artists featured on this resource")
     @property
     def artist(self) -> str | None:
-        return self._join_tags(self.artists)
+        return self._join_tags(artist.name for artist in self.artists)

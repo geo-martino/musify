@@ -10,10 +10,10 @@ from musify._types import StrippedString
 from musify.model import MusifyMutableMapping, MusifyMapping
 from musify.model._base import _CollectionModel
 from musify.model.item.track import Track, HasTracks, HasMutableTracks
-from musify.model.properties import HasName, HasLength, HasImages, SparseDate
+from musify.model.properties import HasName, HasURI, HasLength, HasImages, SparseDate
 
 
-class Playlist[TK, TV: Track](HasMutableTracks[TK, TV], HasName, HasLength, HasImages):
+class Playlist[TK, TV: Track](HasMutableTracks[TK, TV], HasName, HasURI, HasLength, HasImages):
     """Represents a playlist collection and its properties."""
     type: ClassVar[str] = "playlist"
 

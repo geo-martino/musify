@@ -13,6 +13,19 @@ def abstract_property() -> property:
     return property(abstractmethod(fget))
 
 
+def readable_computed_field(name: str) -> property:
+    """Create a new readable computed_field for an attribute with the given ``name``."""
+    name = f"__{name.lstrip("_")}"
+
+    def fget(self) -> Any:
+        field = self.model_computed_fields[name.lstrip("_")]
+        value = getattr(self, name, None)
+        TypeAdapter(field.return_type).validate_python(value)  # validate return
+        return value
+
+    return property(fget)
+
+
 def writeable_computed_field(name: str) -> property:
     """Create a new writeable computed_field for an attribute with the given ``name``."""
     name = f"__{name.lstrip("_")}"
@@ -52,9 +65,15 @@ class MusifyModel(BaseModel):
     def __init__(self, **kwargs):
         # Allow setting writeable computed fields on init
         computed_field_values = {}
-        for field in self.model_computed_fields.keys() & kwargs.keys():
-            if getattr(self.__class__, field).fset and field in kwargs:
+        for field in self.model_computed_fields.keys():
+            if field in self.__pydantic_fields__ or field not in kwargs:
+                continue
+
+            attr = getattr(self.__class__, field)
+            if attr.fset is not None:
                 computed_field_values[field] = kwargs.pop(field)
+            elif attr.fget is not None:  # TODO: fix this, this is not the best logic
+                computed_field_values[f"__{field}"] = kwargs[field]
 
         super().__init__(**kwargs)
         for field, value in computed_field_values.items():
@@ -95,6 +114,11 @@ class MusifyResource(MusifyModel):
         # allow matching identifiers
         values.add(id(self))
         return values
+
+    def __eq__(self, other):
+        if not isinstance(other, MusifyResource):
+            return super().__eq__(other)
+        return self.unique_keys == other.unique_keys
 
     # TODO: figure this out
     # def __getitem__(self, key: str | TagField) -> Any:

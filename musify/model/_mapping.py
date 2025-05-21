@@ -69,7 +69,7 @@ class MusifyMapping[TK, TV: MusifyResource](Mapping[TK | TV, TV]):
         if self is other:
             return True
         elif not isinstance(other, self.__class__):
-            return False
+            return super().__eq__(other)
 
         return not (self.keys() - other.keys())
 

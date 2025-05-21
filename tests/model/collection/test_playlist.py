@@ -5,11 +5,11 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.collection.playlist import Playlist, HasPlaylists, HasMutablePlaylists
-from tests.model.testers import MusifyResourceTester
+from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 from tests.utils import split_list
 
 
-class TestPlaylist(MusifyResourceTester):
+class TestPlaylist(UniqueKeyTester):
     @pytest.fixture
     def model(self, faker: Faker) -> MusifyModel:
         return Playlist(name=faker.sentence())
