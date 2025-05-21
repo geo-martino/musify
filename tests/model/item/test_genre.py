@@ -17,10 +17,15 @@ class TestGenre(UniqueKeyTester):
 
 class TestHasGenres(MusifyResourceTester):
     @pytest.fixture
-    def model(self, faker: Faker) -> MusifyModel:
-        return HasGenres(genres=[Genre(name=genre) for genre in sample(GENRES, k=faker.random_int(3, 6))])
+    def model(self, genres: list[Genre]) -> MusifyModel:
+        return HasGenres(genres=genres)
 
-    def test_from_string(self, faker: Faker):
-        genres = sample(GENRES, k=faker.random_int(3, 6))
-        model = HasGenres(genre=HasGenres._join_tags(genres))
-        assert [genre.name for genre in model.genres] == genres
+    def test_from_string(self, genres: list[Genre]):
+        genre = HasGenres._tag_sep.join(genre.name for genre in genres)
+        model = HasGenres(genre=genre)
+        assert [genre.name for genre in model.genres] == [genre.name for genre in genres]
+
+    def test_to_string(self, genres: list[Genre]):
+        genre = HasGenres._tag_sep.join(genre.name for genre in genres)
+        model = HasGenres(genre=genres)
+        assert model.genre == genre

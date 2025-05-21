@@ -43,7 +43,7 @@ class TestMusifySequence:
 
         assert MusifySequence(models) == sequence, "Failed to construct from list of models"
         assert MusifySequence(iter(models)) == sequence, "Failed to construct from iterable of models"
-        mapping = {faker.word(): model for model in models}
+        mapping = {faker.uuid4(str): model for model in models}
         assert MusifySequence(mapping) == sequence, "Failed to construct from mapping of models"
 
     # noinspection PyTypeChecker

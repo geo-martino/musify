@@ -29,7 +29,7 @@ class TestMusifyMapping:
         assert adapter.validate_python(models[0]) == mapping_single, "Failed to validate single model"
         assert adapter.validate_python(models) == mapping, "Failed to validate list of models"
         assert adapter.validate_python(tuple(models)) == mapping, "Failed to validate tuple of models"
-        assert adapter.validate_python({faker.word(): model for model in models}) == mapping, \
+        assert adapter.validate_python({faker.uuid4(str): model for model in models}) == mapping, \
             "Failed to ignore keys in mapping"
 
     def test_validate_pydantic_schema_on_generics(self, tracks: list[Track], artists: list[Artist]) -> None:

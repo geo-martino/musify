@@ -15,10 +15,10 @@ class TestAlbum(UniqueKeyTester):
 
 class TestHasAlbums(MusifyResourceTester):
     @pytest.fixture
-    def model(self, faker: Faker) -> MusifyModel:
-        return HasAlbums(albums=[Album(name=faker.word()) for _ in range(faker.random_int(3, 6))])
+    def model(self, albums: list[Album]) -> MusifyModel:
+        return HasAlbums(albums=albums)
 
-    def test_from_string(self, faker: Faker):
-        albums = [faker.word() for _ in range(faker.random_int(3, 6))]
-        model = HasAlbums(album=HasAlbums._join_tags(albums))
-        assert [album.name for album in model.albums] == albums
+    def test_from_string(self, albums: list[Album]):
+        album = HasAlbums._tag_sep.join(album.name for album in albums)
+        model = HasAlbums(album=album)
+        assert [album.name for album in model.albums] == [album.name for album in albums]

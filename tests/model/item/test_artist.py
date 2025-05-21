@@ -15,10 +15,15 @@ class TestArtist(UniqueKeyTester):
 
 class TestHasArtists(MusifyResourceTester):
     @pytest.fixture
-    def model(self, faker: Faker) -> MusifyModel:
-        return HasArtists(artists=[Artist(name=faker.word()) for _ in range(faker.random_int(3, 6))])
+    def model(self, artists: list[Artist]) -> MusifyModel:
+        return HasArtists(artists=artists)
 
-    def test_from_string(self, faker: Faker):
-        artists = [faker.word() for _ in range(faker.random_int(3, 6))]
-        model = HasArtists(artist=HasArtists._join_tags(artists))
-        assert [artist.name for artist in model.artists] == artists
+    def test_from_string(self, artists: list[Artist]):
+        artist = HasArtists._tag_sep.join(artist.name for artist in artists)
+        model = HasArtists(artist=artist)
+        assert [artist.name for artist in model.artists] == [artist.name for artist in artists]
+
+    def test_to_string(self, artists: list[Artist]):
+        artist = HasArtists._tag_sep.join(artist.name for artist in artists)
+        model = HasArtists(artist=artists)
+        assert model.artist == artist
