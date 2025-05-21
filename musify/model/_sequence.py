@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Mapping, Iterable, Sequence, MutableSequence, Set, Iterator
-from typing import Any, Self, overload, get_args, Generator
+from typing import Any, Self, overload, get_args
 
 from pydantic import GetCoreSchemaHandler, validate_call, ConfigDict
 from pydantic_core import core_schema
@@ -237,7 +237,7 @@ class MusifyMutableSequence[TK, TV: MusifyResource](MusifySequence[TK, TV], Muta
         self._items_mapped.add(__object)
 
     @validate_call
-    def merge(self, other: Sequence[TV], reference: Sequence[TV] = None) -> None:
+    def merge(self, other: Sequence[TV], reference: Sequence[TV] | None = None) -> None:
         """
         Merge this sequence with another collection.
 

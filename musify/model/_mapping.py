@@ -1,10 +1,10 @@
 from collections.abc import Iterable, Mapping, MutableMapping, Hashable
-from typing import Self, Any, get_origin, get_args
+from typing import Self, Any, get_args
 
 from pydantic import GetCoreSchemaHandler, validate_call
 from pydantic_core import core_schema
 
-from musify.exception import MusifyKeyError, MusifyTypeError, MusifyValueError
+from musify.exception import MusifyKeyError, MusifyTypeError
 from musify.model import MusifyResource
 
 

@@ -1,8 +1,16 @@
+from abc import abstractmethod
 from functools import cached_property
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, RootModel, Field, ConfigDict, TypeAdapter
-from pydantic.fields import ComputedFieldInfo
+
+
+def abstract_property() -> property:
+    """Create a new abstract property for an attribute."""
+    def fget(self) -> Any:
+        raise NotImplementedError
+
+    return property(abstractmethod(fget))
 
 
 def writeable_computed_field(name: str) -> property:
@@ -10,13 +18,13 @@ def writeable_computed_field(name: str) -> property:
     name = f"__{name.lstrip("_")}"
 
     def fget(self) -> Any:
-        field: ComputedFieldInfo = self.model_computed_fields[name.lstrip("_")]
+        field = self.model_computed_fields[name.lstrip("_")]
         value = getattr(self, name, None)
         TypeAdapter(field.return_type).validate_python(value)  # validate return
         return value
 
     def fset(self, value) -> None:
-        field: ComputedFieldInfo = self.model_computed_fields[name.lstrip("_")]
+        field = self.model_computed_fields[name.lstrip("_")]
         value = TypeAdapter(field.return_type).validate_python(value)
         setattr(self, name, value)
 
@@ -108,4 +116,4 @@ class _AttributeModel(MusifyResource):
 
 
 class _CollectionModel(_AttributeModel):
-    """Defines a common base model for attributes made of common properties."""
+    """Defines a common base model for attributes made of common collection properties."""

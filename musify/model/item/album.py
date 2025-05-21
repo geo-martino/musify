@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import ClassVar, Any
 
-from pydantic import Field, PositiveInt, field_validator, computed_field
+from pydantic import Field, field_validator, computed_field
 
 from musify._types import StrippedString
-from musify.model._base import _AttributeModel, writeable_computed_field
+from musify.model._base import _AttributeModel, writeable_computed_field, abstract_property
 from musify.model.item.artist import HasArtists, Artist
 from musify.model.item.genre import HasGenres, Genre
 from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDate, HasImages, HasSeparableTags
@@ -23,24 +23,16 @@ class _Album[RT: Artist, GT: Genre](
         description="Is this a compilation album",
         default=None,
     )
-
-    @computed_field(
+    # noinspection PyArgumentList
+    track_total = computed_field(
+        abstract_property(),
         description="The total number of tracks on this album",
     )
-    @property
-    @abstractmethod
-    def track_total(self) -> PositiveInt | None:
-        """The total number of tracks on this album"""
-        raise NotImplementedError
-
-    @computed_field(
+    # noinspection PyArgumentList
+    disc_total = computed_field(
+        abstract_property(),
         description="The total number of discs for this album",
     )
-    @property
-    @abstractmethod
-    def disc_total(self) -> PositiveInt | None:
-        """The total number of discs on this album"""
-        raise NotImplementedError
 
 
 class Album[RT: Artist, GT: Genre](_Album[RT, GT]):

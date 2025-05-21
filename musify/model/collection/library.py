@@ -8,13 +8,15 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from musify.model.collection.playlist import Playlist, HasPlaylists
-from musify.model.item.track import Track, HasTracks
+from musify.model.collection.playlist import Playlist, HasMutablePlaylists
+from musify.model.item.track import Track, HasMutableTracks
 
 type LibraryMergeType[T] = Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]]
 
 
-class _HasTracksAndPlaylistsMixin[TK, TV: Track, KP, VP: Playlist](HasTracks[TK, TV], HasPlaylists[KP, VP]):
+class _HasTracksAndPlaylistsMixin[TK, TV: Track, KP, VP: Playlist](
+    HasMutableTracks[TK, TV], HasMutablePlaylists[KP, VP]
+):
     @property
     def tracks_in_playlists(self) -> list[TV]:
         """All unique tracks from all playlists in this library"""

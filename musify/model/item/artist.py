@@ -20,7 +20,7 @@ class Artist[GT: Genre](HasGenres[GT], HasName, HasRating):
 class HasArtists[T: Artist](HasSeparableTags):
     artists: list[T] | None = Field(
         description="The artists associated with this resource.",
-        default_factory=list,
+        default_factory=list[T],
         validation_alias="artist",
     )
 

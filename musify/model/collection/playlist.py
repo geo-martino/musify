@@ -7,13 +7,13 @@ from typing import ClassVar
 from pydantic import Field, validate_call
 
 from musify._types import StrippedString
-from musify.model import MusifyMutableMapping
+from musify.model import MusifyMutableMapping, MusifyMapping
 from musify.model._base import _CollectionModel
-from musify.model.item.track import Track, HasTracks
+from musify.model.item.track import Track, HasTracks, HasMutableTracks
 from musify.model.properties import HasName, HasLength, HasImages, SparseDate
 
 
-class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength, HasImages):
+class Playlist[TK, TV: Track](HasMutableTracks[TK, TV], HasName, HasLength, HasImages):
     """Represents a playlist collection and its properties."""
     type: ClassVar[str] = "playlist"
 
@@ -30,14 +30,13 @@ class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength, HasImages):
         default=None,
     )
 
-    @validate_call
-    def merge(self, other: HasTracks[TK, TV], reference: HasTracks[TK, TV] = None) -> None:
+    def merge(self, other: HasTracks[TK, TV], reference: HasTracks[TK, TV] | None = None) -> None:
         """
         Merge two playlists together.
 
         See :py:meth:`.MusifyMutableSequence.merge` for more information.
         """
-        self.tracks.merge(other.tracks, reference=reference.tracks)
+        self.tracks.merge(other.tracks, reference=reference.tracks if reference else None)
 
 
 type MergePlaylistsType[K, V] = V | Iterable[V] | Mapping[K, V]
@@ -45,9 +44,17 @@ type MergePlaylistsType[K, V] = V | Iterable[V] | Mapping[K, V]
 
 class HasPlaylists[TK, TV: Playlist](_CollectionModel):
     """A mixin class to add a `playlists` property to a MusifyCollection."""
+    playlists: MusifyMapping[TK, TV] = Field(
+        description="The playlists in this collection",
+        default_factory=MusifyMapping[TK, TV],
+        frozen=True,
+    )
+
+
+class HasMutablePlaylists[TK, TV: Playlist](HasPlaylists[TK, TV]):
     playlists: MusifyMutableMapping[TK, TV] = Field(
         description="The playlists in this collection",
-        default_factory=list,
+        default_factory=MusifyMutableMapping[TK, TV],
         frozen=True,
     )
 

@@ -3,7 +3,7 @@ from typing import ClassVar, Self
 from pydantic import Field, model_validator
 
 from musify._types import StrippedString
-from musify.model import MusifyMutableSequence
+from musify.model import MusifyMutableSequence, MusifySequence
 from musify.model._base import _CollectionModel
 from musify.model.item.album import HasAlbum, Album
 from musify.model.item.artist import HasArtists, Artist
@@ -87,9 +87,9 @@ class Track[RT: Artist, AT: Album, GT: Genre](
 
 class HasTracks[TK, TV: Track](_CollectionModel):
     """A mixin class to add a `tracks` property to a MusifyCollection."""
-    tracks: MusifyMutableSequence[TK, TV] = Field(
+    tracks: MusifySequence[TK, TV] = Field(
         description="The tracks in this collection",
-        default_factory=MusifyMutableSequence,
+        default_factory=MusifySequence[TK, TV],
         frozen=True,
     )
 
@@ -104,3 +104,12 @@ class HasTracks[TK, TV: Track](_CollectionModel):
                 seen_keys.update(track.unique_keys)
 
         return len(self.tracks)
+
+
+class HasMutableTracks[TK, TV: Track](HasTracks[TK, TV]):
+    """A mixin class to add a `tracks` property to a MusifyCollection."""
+    tracks: MusifyMutableSequence[TK, TV] = Field(
+        description="The tracks in this collection",
+        default_factory=MusifyMutableSequence[TK, TV],
+        frozen=True,
+    )

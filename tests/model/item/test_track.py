@@ -5,7 +5,7 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.item.album import Album
-from musify.model.item.track import Track
+from musify.model.item.track import Track, HasTracks, HasMutableTracks
 from tests.model.testers import MusifyResourceTester
 
 
@@ -58,3 +58,14 @@ class TestTrack(MusifyResourceTester):
         track_different_album = Track(name=track.name, artist=track.artist, album=choice([None, faker.word()]))
         assert track != track_different_album, "Tracks with different albums should not be equal"
 
+
+class TestHasTracks(MusifyResourceTester):
+    @pytest.fixture
+    def model(self, tracks: list[Track]) -> MusifyModel:
+        return HasTracks(tracks=tracks)
+
+
+class TestHasMutableTracks(MusifyResourceTester):
+    @pytest.fixture
+    def model(self, tracks: list[Track]) -> MusifyModel:
+        return HasMutableTracks(tracks=tracks)
