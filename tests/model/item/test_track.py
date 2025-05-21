@@ -6,13 +6,14 @@ from faker import Faker
 from musify.model import MusifyModel
 from musify.model.item.album import Album
 from musify.model.item.track import Track, HasTracks, HasMutableTracks
+from musify.model.properties import RemoteURI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
 
 class TestTrack(UniqueKeyTester):
     @pytest.fixture
-    def model(self, faker: Faker) -> MusifyModel:
-        return Track(name=faker.sentence())
+    def model(self, uri: RemoteURI, faker: Faker) -> MusifyModel:
+        return Track(name=faker.sentence(), uri=uri)
 
     # noinspection PyUnresolvedReferences
     def test_set_track_total_from_album(self, faker: Faker):

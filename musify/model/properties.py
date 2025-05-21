@@ -69,7 +69,7 @@ class HasSeparableTags(_AttributeModel):
         return [tag.strip() for tag in tags.split(cls._tag_sep) if tag.strip()]
 
 
-class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
+class RemoteURI(MusifyRootModel[str], metaclass=ABCMeta):
     """Stores a URI for a resource from a specific remote repository."""
     _source: ClassVar[str] = PrivateAttr(
         # description=(
@@ -86,46 +86,52 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
     )
 
     # noinspection PyNestedDecorators
-    @field_validator("source", mode="after", check_fields=True)
-    @classmethod
-    def _validate_source(cls, source: str) -> str:
-        if source != cls._source:
-            raise ValueError(f"Given URI does not belong to this repository type. Must be {cls._source}, not {source}")
-        return source
+    @model_validator(mode="after")
+    def _validate_source(self) -> Self:
+        if self._source and self.source != self._source:
+            raise ValueError(
+                f"Given URI does not belong to this repository type. Must be {self._source}, not {self.source}"
+            )
+        return self
 
     @computed_field(description="The remote repository that this URI is from.")
+    @property
     @abstractmethod
     def source(self) -> str:
         raise NotImplementedError
 
     @computed_field(description="The type of resource this URI represents.")
+    @property
     @abstractmethod
     def type(self) -> str:
         raise NotImplementedError
 
     @computed_field(description="The unique identifier for this URI.")
+    @property
     @abstractmethod
     def id(self) -> str:
         raise NotImplementedError
 
     @classmethod
     @abstractmethod
-    def from_id(cls, value: str, kind: str) -> Self:
+    def from_id[T](cls, value: T, kind: str) -> T | Self:
         raise NotImplementedError
 
     @computed_field(description="The URL of the API endpoint for this remote resource.")
+    @property
     @abstractmethod
     def href(self) -> URL:
         raise NotImplementedError
 
     # noinspection PyNestedDecorators
     @field_validator("root", mode="wrap", check_fields=True)
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def from_href[T](value: T, handler: ValidatorFunctionWrapHandler) -> str | T:
+    def from_href[T](cls, value: T, handler: ValidatorFunctionWrapHandler) -> T | Self:
         raise NotImplementedError
 
     @computed_field(description="The public URL for this remote resource.")
+    @property
     @abstractmethod
     def url(self) -> URL:
         raise NotImplementedError
@@ -134,7 +140,7 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
     @field_validator("root", mode="wrap", check_fields=True)
     @classmethod
     @abstractmethod
-    def from_url(cls, value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+    def from_url[T](cls, value: T, handler: ValidatorFunctionWrapHandler) -> T | Self:
         raise NotImplementedError
 
     @computed_field(
@@ -142,16 +148,19 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
     )
     @property
     def exists(self) -> bool:
-        return self.id == self._unavailable_id
+        return self.id != self._unavailable_id
 
     def __str__(self):
-        return self.uri
+        return self.root
+
+    def __hash__(self):
+        return hash(self.root)
 
     def __eq__(self, other: str | RemoteURI):
         if self is other:
             return True
         if isinstance(other, RemoteURI):
-            return self.uri == other.uri
+            return self.root == other.root
 
         if isinstance(other, URL):
             if self.href == other or self.url == other:
@@ -159,29 +168,27 @@ class RemoteURI(MusifyRootModel[StrippedString], metaclass=ABCMeta):
             other = str(other)
 
         if isinstance(other, str):
-            return self.uri == other or self.id == other
+            return str(self) == other or self.id == other
 
         return super().__eq__(other)
 
 
 class HasURI[T: RemoteURI](_AttributeModel):
     __unique_attributes__ = frozenset({"uri"})
-    __uri = PrivateAttr(default=None)
+    _uri = PrivateAttr(default=None)
 
     @computed_field(
         description="The URI for this resource on the remote repository"
     )
     @property
     def uri(self) -> T | None:
-        return self.__uri
+        return self._uri
 
     def __eq__(self, other: HasURI):
         if not isinstance(other, HasURI):
             return super().__eq__(other)
         if self is other:
             return True
-        if isinstance(other, HasMutableURI) and not other.has_uri:
-            return False
         return self.uri is not None and other.uri is not None and self.uri == other.uri
 
 
@@ -209,8 +216,8 @@ class HasMutableURI(HasURI):
 
         for uri in uris:
             if uri.source in sources:
-                duplicates.add(uri.source.name)
-            sources.add(uri.source.name)
+                duplicates.add(uri.source)
+            sources.add(uri.source)
 
         if duplicates:
             raise MusifyValueError(f"Duplicate URIs found from sources: {', '.join(duplicates)}")
@@ -223,10 +230,9 @@ class HasMutableURI(HasURI):
         return next((uri for uri in self.uris if uri.source == self.source and uri.exists), None)
 
     @uri.setter
-    @validate_call
-    def uri(self, uri: str | RemoteURI):
-        if isinstance(uri, str):
-            uri = RemoteURI(uri)
+    def uri(self, uri: RemoteURI):
+        if not isinstance(uri, RemoteURI):
+            raise MusifyValueError("URI must be a RemoteURI instance")
 
         if self.source is not None and uri.source != self.source:
             raise MusifyValueError(f"Cannot set URI from {uri.source} to {self.source}")
@@ -238,6 +244,14 @@ class HasMutableURI(HasURI):
                 return
 
         self.uris.append(uri)
+
+    @uri.deleter
+    def uri(self):
+        if self.has_uri is None:
+            return
+
+        idx = next(i for i, uri in enumerate(self.uris) if uri.source == self.source)
+        del self.uris[idx]
 
     @computed_field(
         description=(

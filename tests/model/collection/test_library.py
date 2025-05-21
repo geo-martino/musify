@@ -2,6 +2,7 @@ import pytest
 from faker import Faker
 
 from musify.model import MusifyModel
+# noinspection PyProtectedMember
 from musify.model.collection.library import _HasTracksAndPlaylistsMixin
 from musify.model.collection.playlist import Playlist
 from musify.model.item.track import Track

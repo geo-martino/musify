@@ -42,11 +42,5 @@ class UniqueKeyTester(MusifyModelTester, metaclass=ABCMeta):
             try:
                 setattr(model, key, None)
                 assert value not in model.unique_keys, f"Value {value} should not be in unique keys after removing it"
-            except ValueError:  # value is not nullable
+            except (AttributeError, ValueError):  # value is not mutable or nullable
                 pass
-
-
-class RemoteURITester(UniqueKeyTester, metaclass=ABCMeta):
-    pass  # TODO: and add tests for Has*URI objects too
-
-

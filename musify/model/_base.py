@@ -72,8 +72,11 @@ class MusifyModel(BaseModel):
             attr = getattr(self.__class__, field)
             if attr.fset is not None:
                 computed_field_values[field] = kwargs.pop(field)
-            elif attr.fget is not None:  # TODO: fix this, this is not the best logic
-                computed_field_values[f"__{field}"] = kwargs[field]
+            elif any(
+                    name.endswith(field_private := f"_{field}")
+                    for name in getattr(self.__class__, "__private_attributes__", ())
+            ):
+                computed_field_values[field_private] = kwargs.pop(field)
 
         super().__init__(**kwargs)
         for field, value in computed_field_values.items():
@@ -133,7 +136,7 @@ class MusifyResource(MusifyModel):
     def __setattr__(self, key: str, value: Any) -> None:
         """Set the value of a given attribute key"""
         super().__setattr__(key, value)
-        if key in self._unique_attribute_keys:
+        if key in self._unique_attribute_keys and hasattr(self, "unique_keys"):
             # noinspection PyPropertyAccess
             del self.unique_keys  # clear the cached property
 

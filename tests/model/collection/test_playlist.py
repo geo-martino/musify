@@ -5,14 +5,15 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.collection.playlist import Playlist, HasPlaylists, HasMutablePlaylists
+from musify.model.properties import RemoteURI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 from tests.utils import split_list
 
 
 class TestPlaylist(UniqueKeyTester):
     @pytest.fixture
-    def model(self, faker: Faker) -> MusifyModel:
-        return Playlist(name=faker.sentence())
+    def model(self, uri: RemoteURI, faker: Faker) -> MusifyModel:
+        return Playlist(name=faker.sentence(), uri=uri)
 
 
 class TestHasPlaylists(MusifyResourceTester):
