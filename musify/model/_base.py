@@ -28,7 +28,10 @@ def writeable_computed_field(name: str) -> property:
         value = TypeAdapter(field.return_type).validate_python(value)
         setattr(self, name, value)
 
-    return property(fget, fset)
+    def fdel(self) -> None:
+        delattr(self, name)
+
+    return property(fget, fset, fdel)
 
 
 class MusifyModel(BaseModel):
