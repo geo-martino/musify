@@ -1,4 +1,4 @@
-from random import choice
+from random import choice, sample
 
 import pytest
 from faker import Faker
@@ -6,6 +6,7 @@ from faker import Faker
 from musify.model import MusifyModel
 from musify.model.item.album import Album
 from musify.model.item.track import Track, HasTracks, HasMutableTracks
+from musify.model.properties.order import Position
 from musify.model.properties.uri import URI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
@@ -64,6 +65,22 @@ class TestHasTracks(MusifyResourceTester):
     @pytest.fixture
     def model(self, tracks: list[Track]) -> MusifyModel:
         return HasTracks(tracks=tracks)
+
+    def test_track_total(self, model: HasTracks):
+        assert model.track_total == len(model.tracks), "Track total should be equal to the number of tracks"
+
+    def test_disc_total(self, model: HasTracks, faker: Faker):
+        for total in range(1, 6):
+            for track in sample(model.tracks, 5):
+                track.disc = Position(number=faker.random_int(1, total), total=total)
+
+        assert model.disc_total == 5, "Disc total should be equal to the max number of discs in the tracks"
+
+    def test_disc_total_skips_on_missing_value(self, model: HasTracks, faker: Faker):
+        for track in model.tracks:
+            track.disc = None
+
+        assert model.disc_total is None
 
 
 class TestHasMutableTracks(MusifyResourceTester):
