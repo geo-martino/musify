@@ -9,11 +9,11 @@ from pydantic_core.core_schema import ValidatorFunctionWrapHandler
 from yarl import URL
 
 from musify.model import MusifyResource
-from musify.model.collection.playlist import Playlist
+from musify.model.collection.playlist import Playlist, MutablePlaylist
 from musify.model.item.album import Album
 from musify.model.item.artist import Artist
 from musify.model.item.track import Track
-from musify.model.properties.uri import RemoteURI
+from musify.model.properties.uri import URI
 
 
 @pytest.fixture
@@ -47,10 +47,10 @@ def albums(faker: Faker) -> list[Album]:
 
 @pytest.fixture
 def playlists(faker: Faker) -> list[Playlist]:
-    return [Playlist(name=faker.sentence()) for _ in range(faker.random_int(10, 30))]
+    return [MutablePlaylist(name=faker.sentence()) for _ in range(faker.random_int(10, 30))]
 
 
-class SimpleURI(RemoteURI):
+class SimpleURI(URI):
     _source = None  # disable validation
 
     @property

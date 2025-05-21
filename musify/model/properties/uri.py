@@ -13,7 +13,7 @@ from musify.model import MusifyRootModel
 from musify.model._base import _AttributeModel
 
 
-class RemoteURI(MusifyRootModel[str], metaclass=ABCMeta):
+class URI(MusifyRootModel[str], metaclass=ABCMeta):
     """Stores a URI for a resource from a specific remote repository."""
     _source: ClassVar[str] = PrivateAttr(
         # description=(
@@ -100,10 +100,10 @@ class RemoteURI(MusifyRootModel[str], metaclass=ABCMeta):
     def __hash__(self):
         return hash(self.root)
 
-    def __eq__(self, other: str | RemoteURI):
+    def __eq__(self, other: str | URI):
         if self is other:
             return True
-        if isinstance(other, RemoteURI):
+        if isinstance(other, URI):
             return self.root == other.root
 
         if isinstance(other, URL):
@@ -117,7 +117,7 @@ class RemoteURI(MusifyRootModel[str], metaclass=ABCMeta):
         return super().__eq__(other)
 
 
-class HasURI[T: RemoteURI](_AttributeModel):
+class HasURI[T: URI](_AttributeModel):
     __unique_attributes__ = frozenset({"uri"})
     _uri = PrivateAttr(default=None)
 
@@ -137,7 +137,6 @@ class HasURI[T: RemoteURI](_AttributeModel):
 
 
 class HasMutableURI(HasURI):
-    __unique_attributes__ = frozenset({"uri"})
 
     source: str | None = Field(
         description=(
@@ -147,7 +146,7 @@ class HasMutableURI(HasURI):
         ),
         default=None,
     )
-    uris: list[RemoteURI] = Field(
+    uris: list[URI] = Field(
         description="A list of URIs that represent this item.",
         default_factory=list,
     )
@@ -155,7 +154,7 @@ class HasMutableURI(HasURI):
     # noinspection PyNestedDecorators
     @field_validator("uris", mode="after", check_fields=True)
     @staticmethod
-    def _uris_must_be_from_unique_sources(uris: list[RemoteURI]) -> list[RemoteURI]:
+    def _uris_must_be_from_unique_sources(uris: list[URI]) -> list[URI]:
         sources: set[str] = set()
         duplicates: set[str] = set()
 
@@ -169,14 +168,14 @@ class HasMutableURI(HasURI):
         return uris
 
     @property
-    def uri(self) -> RemoteURI | None:
+    def uri(self) -> URI | None:
         if self.source is None:
             return
         return next((uri for uri in self.uris if uri.source == self.source and uri.exists), None)
 
     @uri.setter
-    def uri(self, uri: RemoteURI):
-        if not isinstance(uri, RemoteURI):
+    def uri(self, uri: URI):
+        if not isinstance(uri, URI):
             raise MusifyValueError("URI must be a RemoteURI instance")
 
         if self.source is not None and uri.source != self.source:

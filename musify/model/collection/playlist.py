@@ -17,7 +17,7 @@ from musify.model.properties.image import HasImages
 from musify.model.properties.date import SparseDate
 
 
-class Playlist[TK, TV: Track](HasMutableTracks[TK, TV], HasName, HasURI, HasLength, HasImages):
+class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasURI, HasLength, HasImages):
     """Represents a playlist collection and its properties."""
     type: ClassVar[str] = "playlist"
 
@@ -34,6 +34,8 @@ class Playlist[TK, TV: Track](HasMutableTracks[TK, TV], HasName, HasURI, HasLeng
         default=None,
     )
 
+
+class MutablePlaylist[TK, TV: Track](Playlist[TK, TV], HasMutableTracks[TK, TV]):
     def merge(self, other: HasTracks[TK, TV], reference: HasTracks[TK, TV] | None = None) -> None:
         """
         Merge two playlists together.
@@ -55,7 +57,7 @@ class HasPlaylists[TK, TV: Playlist](_CollectionModel):
     )
 
 
-class HasMutablePlaylists[TK, TV: Playlist](HasPlaylists[TK, TV]):
+class HasMutablePlaylists[TK, TV: MutablePlaylist](HasPlaylists[TK, TV]):
     playlists: MusifyMutableMapping[TK, TV] = Field(
         description="The playlists in this collection",
         default_factory=MusifyMutableMapping[TK, TV],

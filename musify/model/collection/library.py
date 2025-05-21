@@ -8,15 +8,13 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from musify.model.collection.playlist import Playlist, HasMutablePlaylists
-from musify.model.item.track import Track, HasMutableTracks
+from musify.model.collection.playlist import Playlist, HasPlaylists, HasMutablePlaylists
+from musify.model.item.track import Track, HasTracks, HasMutableTracks
 
 type LibraryMergeType[T] = Library[T] | Collection[Playlist[T]] | Mapping[str, Playlist[T]]
 
 
-class _HasTracksAndPlaylistsMixin[TK, TV: Track, KP, VP: Playlist](
-    HasMutableTracks[TK, TV], HasMutablePlaylists[KP, VP]
-):
+class _HasTracksAndPlaylistsMixin[TK, TV: Track, KP, VP: Playlist](HasTracks[TK, TV], HasPlaylists[KP, VP]):
     @property
     def tracks_in_playlists(self) -> list[TV]:
         """All unique tracks from all playlists in this library"""
@@ -26,7 +24,7 @@ class _HasTracksAndPlaylistsMixin[TK, TV: Track, KP, VP: Playlist](
 
 
 class Library[TK, TV: Track, KP, VP: Playlist](_HasTracksAndPlaylistsMixin[TK, TV, KP, VP], metaclass=ABCMeta):
-    """A library of items and playlists and other object types."""
+    """A library of tracks and playlists and other object types."""
     type: ClassVar[str] = "library"
 
     source: ClassVar[str] = Field(
@@ -64,3 +62,8 @@ class Library[TK, TV: Track, KP, VP: Playlist](_HasTracksAndPlaylistsMixin[TK, T
         """Log stats on currently loaded playlists"""
         raise NotImplementedError
 
+
+class MutableLibrary[TK, TV: Track, KP, VP: Playlist](
+    Library[TK, TV, KP, VP], HasMutableTracks[TK, TV], HasMutablePlaylists[TK, VP], metaclass=ABCMeta
+):
+    """A mutable library of tracks and playlists and other object types."""

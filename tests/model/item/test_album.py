@@ -3,13 +3,13 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.item.album import Album, HasAlbums
-from musify.model.properties.uri import RemoteURI
+from musify.model.properties.uri import URI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
 
 class TestAlbum(UniqueKeyTester):
     @pytest.fixture
-    def model(self, uri: RemoteURI, faker: Faker) -> MusifyModel:
+    def model(self, uri: URI, faker: Faker) -> MusifyModel:
         return Album(name=faker.word(), uri=uri)
 
 

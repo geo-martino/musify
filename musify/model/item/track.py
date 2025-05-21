@@ -1,6 +1,6 @@
 from typing import ClassVar, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, model_validator, PositiveInt, computed_field
 
 from musify._types import StrippedString
 from musify.model.sequence import MusifyMutableSequence, MusifySequence
@@ -101,17 +101,20 @@ class HasTracks[TK, TV: Track](_CollectionModel):
         frozen=True,
     )
 
+    @computed_field(description="The total number of tracks in this sequence")
     @property
-    def track_total(self) -> int:
-        """The total number of tracks in this sequence"""
-        seen_keys = set(key for track in self.tracks for key in track.unique_keys)
-        for pl in self.playlists.values():
-            for track in pl:
-                if not any(key in seen_keys for key in track.unique_keys):
-                    self.tracks.append(track)
-                seen_keys.update(track.unique_keys)
-
+    def track_total(self) -> PositiveInt:
         return len(self.tracks)
+
+    @computed_field(description="The total number of discs in this sequence")
+    @property
+    def disc_total(self) -> PositiveInt | None:
+        values = set(
+            track.disc.total
+            for track in self.tracks
+            if track.disc is not None and track.disc.total is not None
+        )
+        return max(values) if values else None
 
 
 class HasMutableTracks[TK, TV: Track](HasTracks[TK, TV]):

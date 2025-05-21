@@ -4,7 +4,7 @@ import pytest
 
 from musify.exception import MusifyValueError
 from musify.model import MusifyRootModel, MusifyModel
-from musify.model.properties.uri import RemoteURI, HasURI, HasMutableURI
+from musify.model.properties.uri import URI, HasURI, HasMutableURI
 from tests.model.conftest import SimpleURI
 from tests.model.testers import MusifyModelTester, UniqueKeyTester
 
@@ -42,17 +42,17 @@ class TestRemoteURI(MusifyModelTester):
 
 class TestHasURI(UniqueKeyTester):
     @pytest.fixture
-    def model(self, uri: RemoteURI) -> MusifyModel:
+    def model(self, uri: URI) -> MusifyModel:
         return HasURI(uri=uri)
 
-    def test_uri_field_is_read_only(self, model: HasURI, uri: RemoteURI) -> None:
+    def test_uri_field_is_read_only(self, model: HasURI, uri: URI) -> None:
         assert model.uri is uri
 
         with pytest.raises(AttributeError):
             # noinspection PyPropertyAccess
             model.uri = uri
 
-    def test_equality(self, model: HasURI, uri: RemoteURI):
+    def test_equality(self, model: HasURI, uri: URI):
         assert model == model
         assert model == HasURI(uri=uri)
 
@@ -65,10 +65,10 @@ class TestHasURI(UniqueKeyTester):
 
 class TestHasMutableURI(UniqueKeyTester):
     @pytest.fixture
-    def model(self, uris: list[RemoteURI]) -> MusifyModel:
+    def model(self, uris: list[URI]) -> MusifyModel:
         return HasMutableURI(source=choice(uris).source, uris=uris)
 
-    def test_validates_uris_are_from_unique_sources(self, uris: list[RemoteURI]):
+    def test_validates_uris_are_from_unique_sources(self, uris: list[URI]):
         uri = choice(uris)
         different_uri = next(u for u in uris if u.source != uri.source)
         new_uri = SimpleURI.from_id(different_uri.id, different_uri.type, uri.source)
@@ -77,7 +77,7 @@ class TestHasMutableURI(UniqueKeyTester):
         with pytest.raises(ValueError):
             HasMutableURI(uris=[*uris, new_uri])
 
-    def test_get_uri(self, model: HasMutableURI, uris: list[RemoteURI]) -> None:
+    def test_get_uri(self, model: HasMutableURI, uris: list[URI]) -> None:
         assert model.uris == uris
         assert model.uri.source == model.source
         assert model.uri == next(uri for uri in uris if uri.source == model.source)
@@ -85,7 +85,7 @@ class TestHasMutableURI(UniqueKeyTester):
         model.source = None
         assert model.uri is None
 
-    def test_set_uri(self, model: HasMutableURI, uris: list[RemoteURI]):
+    def test_set_uri(self, model: HasMutableURI, uris: list[URI]):
         assert model.uri is not None
 
         old_uri = model.uri
@@ -100,7 +100,7 @@ class TestHasMutableURI(UniqueKeyTester):
         assert old_uri not in model.uris
         assert old_uri not in model.unique_keys
 
-    def test_set_uri_validates_type(self, model: HasMutableURI, uris: list[RemoteURI]):
+    def test_set_uri_validates_type(self, model: HasMutableURI, uris: list[URI]):
         different_uri = next(uri for uri in uris if uri.source != model.source)
 
         with pytest.raises(MusifyValueError):
@@ -108,13 +108,13 @@ class TestHasMutableURI(UniqueKeyTester):
         with pytest.raises(MusifyValueError):
             model.uri = different_uri
 
-    def test_delete_uri(self, model: HasMutableURI, uris: list[RemoteURI]):
+    def test_delete_uri(self, model: HasMutableURI, uris: list[URI]):
         uri = model.uri
         del model.uri
         assert uri not in model.uris
 
     # noinspection PyTestUnpassedFixture
-    def test_has_uri(self, model: HasMutableURI, uris: list[RemoteURI]) -> None:
+    def test_has_uri(self, model: HasMutableURI, uris: list[URI]) -> None:
         assert model.uri.exists
         assert model.has_uri is True
 
@@ -127,7 +127,7 @@ class TestHasMutableURI(UniqueKeyTester):
         assert model.uri is None
         assert model.has_uri is None
 
-    def test_equality(self, model: HasMutableURI, uris: list[RemoteURI]) -> None:
+    def test_equality(self, model: HasMutableURI, uris: list[URI]) -> None:
         assert model == model
         assert model == HasMutableURI(source=model.source, uris=uris)
 
