@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable
+from collections.abc import Iterable, Mapping
 from copy import deepcopy
-from typing import Self, ClassVar
+from typing import ClassVar
 
-from pydantic import Field
+from pydantic import Field, validate_call
 
 from musify._types import StrippedString
-from musify.exception import MusifyTypeError
 from musify.model import MusifyMutableMapping
 from musify.model._base import _CollectionModel
 from musify.model.item.track import Track, HasTracks
@@ -31,40 +30,17 @@ class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength, HasImages):
         default=None,
     )
 
-    def merge(self, other: Collection[TV], reference: Self | None = None) -> None:
+    @validate_call
+    def merge(self, other: HasTracks[TK, TV], reference: HasTracks[TK, TV] = None) -> None:
         """
-        Merge tracks in this playlist with another collection, synchronising tracks between the two.
-        Only modifies this playlist.
+        Merge two playlists together.
 
-        Sort order is not preserved when merging.
-        Any items that need to be added to this playlist will be added at the end of the playlist.
-        Duplicates that are present in the ``other`` collection are filtered out by default.
-
-        :param other: The collection of items to merge onto this playlist.
-        :param reference: Optionally, provide a reference playlist to compare both the current playlist
-            and the ``other`` items to. The function will determine tracks to remove from
-            this playlist based on the reference. Useful for using this function as a synchronizer
-            where the reference refers to the playlist at the previous sync.
+        See :py:meth:`.MusifyMutableSequence.merge` for more information.
         """
-        if not self._validate_item_type(other):
-            raise MusifyTypeError([type(i).__name__ for i in other])
+        self.tracks.merge(other.tracks, reference=reference.tracks)
 
-        if reference is None:
-            self.extend(self.outer_difference(other), allow_duplicates=False)
-            return
 
-        for item in reference:
-            if item not in other and item in self:
-                self.remove(item)
-
-        self.extend(reference.outer_difference(other), allow_duplicates=False)
-
-    def __or__(self, other: Iterable[TV]) -> Self:
-        return deepcopy(self).merge(other)
-
-    def __ior__(self, other: Iterable[TV]) -> Self:
-        self.merge(other)
-        return self
+type MergePlaylistsType[K, V] = V | Iterable[V] | Mapping[K, V]
 
 
 class HasPlaylists[TK, TV: Playlist](_CollectionModel):
@@ -74,3 +50,42 @@ class HasPlaylists[TK, TV: Playlist](_CollectionModel):
         default_factory=list,
         frozen=True,
     )
+
+    @staticmethod
+    def _get_playlists_map_from_merge_input(
+            playlists: MergePlaylistsType[TK, TV] | None
+    ) -> MusifyMutableMapping[TK, TV] | None:
+        match playlists:
+            case None:
+                return
+            case MusifyMutableMapping():
+                return playlists
+            case HasPlaylists():
+                return playlists.playlists
+            case _:
+                return MusifyMutableMapping(playlists)
+
+    @validate_call
+    def merge_playlists(
+            self, other: MergePlaylistsType[TK, TV], reference: MergePlaylistsType[TK, TV] = None
+    ) -> None:
+        """
+        Merge playlists from given list/map/library to this library.
+
+        If a matching playlist is found in the current model, :py:meth:`.Playlist.merge` is called on the
+        current playlist with the other playlist.
+        If a reference is provided and a match is found, this will be passed to :py:meth:`.Playlist.merge` too.
+        If a playlist is not found in the current model, it will be added to the model.
+
+        :param other: The playlists to merge into the current playlists.
+        :param reference: The reference playlists to refer to when merging.
+        """
+        other = self._get_playlists_map_from_merge_input(other)
+        reference = self._get_playlists_map_from_merge_input(reference)
+
+        for name, playlist in other.items():
+            if playlist not in self.playlists:
+                self.playlists.add(deepcopy(playlist))
+                continue
+
+            self.playlists[playlist].merge(playlist, reference=reference[playlist] if reference else None)

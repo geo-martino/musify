@@ -17,7 +17,7 @@ class TestTrack(MusifyResourceTester):
     # noinspection PyUnresolvedReferences
     def test_set_track_total_from_album(self, faker: Faker):
         track = Track(name=faker.sentence(), album=Album(name=faker.sentence()))
-        assert track.track is None, "Default value replaced when no number found on Album"
+        assert track.track is None, "Default value not replaced when no number found on Album"
 
         album = Album(name=faker.sentence(), track_total=faker.random_int(10, 20))
 
@@ -32,7 +32,7 @@ class TestTrack(MusifyResourceTester):
     # noinspection PyUnresolvedReferences
     def test_set_disc_total_from_album(self, faker: Faker):
         track = Track(name=faker.sentence(), album=Album(name=faker.sentence()))
-        assert track.disc is None, "Default value replaced when no number found on Album"
+        assert track.disc is None, "Default value not replaced when no number found on Album"
 
         album = Album(name=faker.sentence(), disc_total=faker.random_int(10, 20))
 

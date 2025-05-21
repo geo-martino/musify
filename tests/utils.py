@@ -1,5 +1,7 @@
 import datetime
+import itertools
 import string
+from collections.abc import Iterable, Collection, Iterator
 from pathlib import Path
 from random import choice, randrange, sample
 from typing import Any
@@ -107,3 +109,33 @@ GENRES: tuple[str, ...] = tuple(genre.lower() for genre in (
 def random_genres(size: int | None = None) -> list[str]:
     """Return a list of random genres."""
     return sample(GENRES, min(size, len(GENRES)) if size else randrange(0, len(GENRES)))
+
+
+def split_list[T](lst: Collection[T], n: int, overlap: int = 0) -> Iterator[list[T]]:
+    """
+    Split a list into n sub-lists of approximately equal size.
+
+    :param lst: The list to split.
+    :param n: The number of sub-lists to create.
+    :param overlap: The number of overlapping elements between sub-lists.
+    """
+    if overlap >= len(lst):
+        raise ValueError("Overlap must be less than the size of the list.")
+
+    def _get_batcher():
+        # noinspection PyTypeChecker
+        return map(list, itertools.batched(lst, size))
+
+    size = (len(lst) + 1) // n
+    batcher_left = _get_batcher()
+    batcher_right = _get_batcher()
+    next(batcher_right)
+
+    overlap_result = []
+    # noinspection PyTypeChecker
+    for item in batcher_left:
+        overlap_batch = next(batcher_right, [])[:overlap]
+        overlap_result.extend(overlap_batch)
+        yield item + overlap_batch
+
+    yield overlap_result

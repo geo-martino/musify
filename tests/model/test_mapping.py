@@ -73,9 +73,9 @@ class TestMusifyMapping:
         assert mapping is not MusifyMapping(models)
         assert mapping == MusifyMapping(models)
 
-        models_initial = models[2:]
-        assert mapping != MusifyMapping(models_initial)
-        assert MusifyMapping(models_initial) == mapping
+        initial = models[2:]
+        assert mapping != MusifyMapping(initial)
+        assert MusifyMapping(initial) == mapping
 
     def test_copy(self, mapping: MusifyMapping, models: list[MusifyResource]):
         mapping_copy = mapping.copy()
@@ -90,8 +90,8 @@ class TestMusifyMapping:
         assert mapping[next(iter(model.unique_keys))] == model
 
     def test_getitem_fails(self, mapping: MusifyMapping, models: list[MusifyResource]):
-        models_initial = models[2:]
-        mapping = MusifyMapping(models_initial)
+        initial = models[2:]
+        mapping = MusifyMapping(initial)
 
         with pytest.raises(MusifyKeyError):
             assert mapping[models[0]]
@@ -161,9 +161,9 @@ class TestMusifyMutableMapping:
             del mapping[choice(models)]
 
     def test_add(self, models: list[MusifyResource]) -> None:
-        models_initial = models[2:]
-        mapping = MusifyMutableMapping(models_initial)
-        assert len(mapping) == len(models_initial)
+        initial = models[2:]
+        mapping = MusifyMutableMapping(initial)
+        assert len(mapping) == len(initial)
 
         model = models[0]
         assert all(key not in mapping._items for key in model.unique_keys)
@@ -171,22 +171,22 @@ class TestMusifyMutableMapping:
         mapping.add(model)
         assert model in mapping
         assert all(key in mapping._items for key in model.unique_keys)
-        assert len(mapping) == len(models_initial) + 1
+        assert len(mapping) == len(initial) + 1
 
         # unchanged when adding existing resource
         mapping.add(choice(list(mapping.values())))
-        assert len(mapping) == len(models_initial) + 1
+        assert len(mapping) == len(initial) + 1
 
     def test_add_fails(self, models: list[MusifyResource]) -> None:
-        models_initial = models[2:]
-        mapping = MusifyMutableMapping(models_initial)
+        initial = models[2:]
+        mapping = MusifyMutableMapping(initial)
 
         with pytest.raises(ValueError):
             mapping.add("invalid value")
 
     def test_update(self, models: list[MusifyResource]):
-        models_initial = models[2:]
-        mapping = MusifyMutableMapping(models_initial)
+        initial = models[2:]
+        mapping = MusifyMutableMapping(initial)
         assert not all(key in mapping._items for model in models for key in model.unique_keys)
         assert len(mapping) < len(models)
 
@@ -195,9 +195,9 @@ class TestMusifyMutableMapping:
         assert len(mapping) == len(models)
 
     def test_remove(self, models: list[MusifyResource]):
-        models_initial = models[2:]
-        mapping = MusifyMutableMapping(models_initial)
-        assert len(mapping) == len(models_initial)
+        initial = models[2:]
+        mapping = MusifyMutableMapping(initial)
+        assert len(mapping) == len(initial)
 
         model = choice(list(mapping.values()))
         assert model in mapping
@@ -205,15 +205,15 @@ class TestMusifyMutableMapping:
         mapping.remove(model)
         assert model not in mapping
         assert all(key not in mapping._items for key in model.unique_keys)
-        assert len(mapping) == len(models_initial) - 1
+        assert len(mapping) == len(initial) - 1
 
         # doesn't fail when removing non-existing resource
         assert models[0] not in mapping
         mapping.remove(models[0])
 
     def test_clear(self, models: list[MusifyResource]):
-        models_initial = models[2:]
-        mapping = MusifyMutableMapping(models_initial)
+        initial = models[2:]
+        mapping = MusifyMutableMapping(initial)
         assert mapping._items
 
         mapping.clear()

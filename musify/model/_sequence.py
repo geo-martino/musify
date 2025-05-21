@@ -1,6 +1,6 @@
 from abc import abstractmethod
-from collections.abc import Mapping, Iterable, Sequence, MutableSequence, Set
-from typing import Any, Self, overload, get_args
+from collections.abc import Mapping, Iterable, Sequence, MutableSequence, Set, Iterator
+from typing import Any, Self, overload, get_args, Generator
 
 from pydantic import GetCoreSchemaHandler, validate_call, ConfigDict
 from pydantic_core import core_schema
@@ -37,7 +37,7 @@ class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
         return core_schema.no_info_after_validator_function(
             function=cls._validate,
             schema=handler(schema),
-            serialization=core_schema.plain_serializer_function_ser_schema(cls.items.fget)
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda x: x._items)
         )
 
     @classmethod
@@ -51,9 +51,15 @@ class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
         raise MusifyValueError(f"Invalid value: {value}")
 
     @property
-    def items(self) -> list[TV]:
-        """The items in this sequence"""
-        return self._items
+    def unique(self) -> Iterator[TV]:
+        """The unique items in this sequence"""
+        seen = set()
+        for key, value in self._items_mapped.items():
+            if key in seen:
+                continue
+
+            yield value
+            seen.add(key)
 
     def __init__(self, items: Iterable[TV] | Mapping[Any, TV] = None):
         if items is None:
@@ -65,7 +71,7 @@ class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
         self._items_mapped: MusifyMutableMapping[TK, TV] = MusifyMutableMapping(self._items)
 
     def __repr__(self):
-        return repr(self.items)
+        return repr(self._items)
 
     def __len__(self):
         return len(self._items)
@@ -80,7 +86,7 @@ class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
         elif not isinstance(other, self.__class__):
             return False
 
-        return self.items == other.items
+        return self._items == other._items
 
     def __ne__(self, other: Self):
         return not self.__eq__(other)
@@ -193,6 +199,16 @@ class MusifyMutableSequence[TK, TV: MusifyResource](MusifySequence[TK, TV], Muta
         return self
 
     @validate_call
+    def __or__(self, other: Sequence[TV]) -> Self:
+        items = self.copy()
+        return items.merge(other)
+
+    @validate_call
+    def __ior__(self, other: Sequence[TV]) -> Self:
+        self.merge(other)
+        return self
+
+    @validate_call
     def append(self, __object: TV, allow_duplicates: bool = True) -> None:
         """Add an item to the end of this sequence"""
         if not allow_duplicates and __object in self._items_mapped:
@@ -219,6 +235,32 @@ class MusifyMutableSequence[TK, TV: MusifyResource](MusifySequence[TK, TV], Muta
 
         self._items.insert(__index, __object)
         self._items_mapped.add(__object)
+
+    @validate_call
+    def merge(self, other: Sequence[TV], reference: Sequence[TV] = None) -> None:
+        """
+        Merge this sequence with another collection.
+
+        By providing just a collection of items, this function will add all new items (without duplicates)
+        to the end of this sequence.
+
+        Optionally, a 3-way sync may be achieved by providing a ``reference`` sequence to compare the current sequence
+        and the ``other`` sequence to. Items present in both this sequence and the ``reference``
+        but not in the ``other`` sequence will be removed from this sequence.
+
+        :param other: The sequence of items to merge with.
+        :param reference: The reference sequence to compare this sequence and the ``other`` sequence to.
+        """
+        if reference is None:
+            self.extend(other, allow_duplicates=False)
+            return
+
+        for item in reference:
+            if item not in other and item in self:
+                self.remove(item)
+
+        # noinspection PyTypeChecker
+        self.extend(MusifySequence.outer_difference(reference, other), allow_duplicates=False)
 
     @validate_call
     def remove(self, __value: TV) -> None:

@@ -11,6 +11,12 @@ class TestAlbum(MusifyResourceTester):
     def model(self, faker: Faker) -> MusifyModel:
         return Album(name=faker.word())
 
+
+class TestHasAlbums(MusifyResourceTester):
+    @pytest.fixture
+    def model(self, faker: Faker) -> MusifyModel:
+        return HasAlbums(albums=[Album(name=faker.word()) for _ in range(faker.random_int(3, 6))])
+
     def test_from_string(self, faker: Faker):
         albums = [faker.word() for _ in range(faker.random_int(3, 6))]
         model = HasAlbums(album=HasAlbums._join_tags(albums))

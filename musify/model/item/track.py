@@ -92,3 +92,15 @@ class HasTracks[TK, TV: Track](_CollectionModel):
         default_factory=MusifyMutableSequence,
         frozen=True,
     )
+
+    @property
+    def track_total(self) -> int:
+        """The total number of tracks in this sequence"""
+        seen_keys = set(key for track in self.tracks for key in track.unique_keys)
+        for pl in self.playlists.values():
+            for track in pl:
+                if not any(key in seen_keys for key in track.unique_keys):
+                    self.tracks.append(track)
+                seen_keys.update(track.unique_keys)
+
+        return len(self.tracks)

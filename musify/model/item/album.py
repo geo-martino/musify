@@ -12,12 +12,15 @@ from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDat
 class Album[RT: Artist, GT: Genre](
     HasArtists[RT], HasGenres[GT], HasName, HasLength, HasRating, HasReleaseDate, HasImages
 ):
-    """Represents an album item and its properties."""
     type: ClassVar[str] = "album"
 
     name: StrippedString = Field(
         description="The name of this album.",
         alias="album",
+    )
+    compilation: bool | None = Field(
+        description="Is this a compilation album",
+        default=None,
     )
     track_total: PositiveInt | None = Field(
         description="The total number of tracks on this album",
@@ -25,10 +28,6 @@ class Album[RT: Artist, GT: Genre](
     )
     disc_total: PositiveInt | None = Field(
         description="The total number of discs for this album",
-        default=None,
-    )
-    compilation: bool | None = Field(
-        description="Is this a compilation album",
         default=None,
     )
 

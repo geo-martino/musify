@@ -426,11 +426,16 @@ class ImageLink(MusifyModel):
 
     async def load(self, session: aiohttp.ClientSession = None) -> Image:
         """Load the image from the URL."""
+        close_session = False
         if session is None:
+            close_session = True
             session = aiohttp.ClientSession()
 
         async with session.request(method=HTTPMethod.GET, url=self.url) as response:
             image_bytes = await response.read()
+
+        if close_session:
+            await session.close()
 
         return Image.open(BytesIO(image_bytes))
 

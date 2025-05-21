@@ -33,7 +33,7 @@ class MusifyMapping[TK, TV: MusifyResource](Mapping[TK | TV, TV]):
         return core_schema.no_info_after_validator_function(
             function=cls._construct,
             schema=handler(schema),
-            serialization=core_schema.plain_serializer_function_ser_schema(cls.items.fget)
+            serialization=core_schema.plain_serializer_function_ser_schema(lambda x: x._items)
         )
 
     @classmethod
@@ -48,11 +48,6 @@ class MusifyMapping[TK, TV: MusifyResource](Mapping[TK | TV, TV]):
             return cls(value)
         raise MusifyTypeError(f"Unrecognised value type: {value!r}")
 
-    @property
-    def items(self) -> Mapping[TK | TV, TV]:
-        """The items in this collection"""
-        return self._items
-
     def __init__(self, items: Iterable[TV] = None):
         if items is None:
             items = ()
@@ -62,7 +57,7 @@ class MusifyMapping[TK, TV: MusifyResource](Mapping[TK | TV, TV]):
         self._items: dict[TK | TV, TV] = {key: item for item in items for key in item.unique_keys}
 
     def __repr__(self):
-        return repr(self.items)
+        return repr(self._items)
 
     def __len__(self):
         return len(self._items)
