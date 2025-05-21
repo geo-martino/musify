@@ -116,6 +116,7 @@ class MusifyResource(MusifyModel):
         values.update({str(value) for value in values})
         # allow matching identifiers
         values.add(id(self))
+
         return values
 
     def __eq__(self, other):
