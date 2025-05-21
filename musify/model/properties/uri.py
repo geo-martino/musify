@@ -34,7 +34,7 @@ class RemoteURI(MusifyRootModel[str], metaclass=ABCMeta):
     def _validate_source(self) -> Self:
         if self._source and self.source != self._source:
             raise ValueError(
-                f"Given URI does not belong to this repository type. Must be {self._source}, not {self.source}"
+                f"Given URI does not belong to this {self._source!r} repository type. Found: {self.source!r}"
             )
         return self
 
@@ -142,7 +142,8 @@ class HasMutableURI(HasURI):
     source: str | None = Field(
         description=(
             "The type of remote repository this item is associated with. "
-            "Used to determine which URI to return from the `uri` attribute."
+            "This is used to extract the appropriate URI from a list of available URIs "
+            "and validate incoming URIs contain one URI from the correct source."
         ),
         default=None,
     )

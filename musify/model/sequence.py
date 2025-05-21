@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from collections.abc import Mapping, Iterable, Sequence, MutableSequence, Set, Iterator
 from typing import Any, Self, overload, get_args
 
@@ -97,11 +96,9 @@ class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):
         return __item in self._items_mapped
 
     @overload
-    @abstractmethod
     def __getitem__(self, index: int) -> TV: ...
 
     @overload
-    @abstractmethod
     def __getitem__(self, index: slice) -> list[TV]: ...
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -151,11 +148,9 @@ class MusifyMutableSequence[TK, TV: MusifyResource](MusifySequence[TK, TV], Muta
     to execute functionality on the sequence according to the item's unique keys.
     """
     @overload
-    @abstractmethod
     def __setitem__(self, index: int, value: TV) -> None: ...
 
     @overload
-    @abstractmethod
     def __setitem__(self, index: slice, value: Iterable[TV]) -> None: ...
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
