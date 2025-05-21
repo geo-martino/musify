@@ -3,7 +3,7 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.item.artist import Artist, HasArtists
-from musify.model.properties import RemoteURI
+from musify.model.properties.uri import RemoteURI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
 

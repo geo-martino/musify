@@ -4,7 +4,7 @@ from faker import Faker
 from musify.model import MusifyModel
 from musify.model.collection.artist import ArtistCollection
 from musify.model.item.album import Album
-from musify.model.properties import RemoteURI
+from musify.model.properties.uri import RemoteURI
 from tests.model.testers import UniqueKeyTester
 
 

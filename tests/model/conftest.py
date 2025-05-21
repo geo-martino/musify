@@ -13,7 +13,7 @@ from musify.model.collection.playlist import Playlist
 from musify.model.item.album import Album
 from musify.model.item.artist import Artist
 from musify.model.item.track import Track
-from musify.model.properties import RemoteURI
+from musify.model.properties.uri import RemoteURI
 
 
 @pytest.fixture
@@ -95,7 +95,9 @@ class SimpleURI(RemoteURI):
 
 @pytest.fixture
 def uri(models: list[MusifyResource], faker: Faker) -> SimpleURI:
-    return SimpleURI.from_id(faker.random_int(int(10e9), int(10e10)), kind=choice(models).type)
+    return SimpleURI.from_id(
+        faker.random_int(int(10e9), int(10e10)), kind=choice(models).type, source=faker.word()
+    )
 
 
 @pytest.fixture

@@ -6,7 +6,8 @@ from pydantic import GetCoreSchemaHandler, validate_call, ConfigDict
 from pydantic_core import core_schema
 
 from musify.exception import MusifyValueError
-from musify.model import MusifyResource, MusifyMutableMapping
+from musify.model import MusifyResource
+from musify.model.mapping import MusifyMutableMapping
 
 
 class MusifySequence[TK, TV: MusifyResource](Sequence[TV]):

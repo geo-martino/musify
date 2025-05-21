@@ -6,7 +6,7 @@ from faker import Faker
 from musify.model import MusifyModel
 from musify.model.item.album import Album
 from musify.model.item.track import Track, HasTracks, HasMutableTracks
-from musify.model.properties import RemoteURI
+from musify.model.properties.uri import RemoteURI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 
 

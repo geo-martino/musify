@@ -4,7 +4,10 @@ from pydantic import Field, computed_field, field_validator
 
 from musify._types import StrippedString
 from musify.model.item.genre import HasGenres, Genre
-from musify.model.properties import HasName, HasSeparableTags, HasRating, HasURI
+from musify.model.properties import HasSeparableTags
+from musify.model.properties.name import HasName
+from musify.model.properties.uri import HasURI
+from musify.model.properties.rating import HasRating
 
 
 class _Artist[GT: Genre](HasGenres[GT], HasName, HasURI, HasRating):

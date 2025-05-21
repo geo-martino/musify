@@ -7,7 +7,13 @@ from musify._types import StrippedString
 from musify.model._base import _AttributeModel, writeable_computed_field, abstract_property
 from musify.model.item.artist import HasArtists, Artist
 from musify.model.item.genre import HasGenres, Genre
-from musify.model.properties import HasName, HasLength, HasRating, HasReleaseDate, HasImages, HasSeparableTags, HasURI
+from musify.model.properties import HasSeparableTags
+from musify.model.properties.name import HasName
+from musify.model.properties.length import HasLength
+from musify.model.properties.uri import HasURI
+from musify.model.properties.rating import HasRating
+from musify.model.properties.image import HasImages
+from musify.model.properties.date import HasReleaseDate
 
 
 class _Album[RT: Artist, GT: Genre](

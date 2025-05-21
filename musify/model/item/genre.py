@@ -3,7 +3,8 @@ from typing import ClassVar, Any
 from pydantic import Field, computed_field, field_validator
 
 from musify._types import StrippedString
-from musify.model.properties import HasName, HasSeparableTags
+from musify.model.properties import HasSeparableTags
+from musify.model.properties.name import HasName
 
 
 class Genre(HasName):

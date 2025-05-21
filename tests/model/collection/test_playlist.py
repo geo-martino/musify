@@ -5,7 +5,7 @@ from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.collection.playlist import Playlist, HasPlaylists, HasMutablePlaylists
-from musify.model.properties import RemoteURI
+from musify.model.properties.uri import RemoteURI
 from tests.model.testers import MusifyResourceTester, UniqueKeyTester
 from tests.utils import split_list
 
