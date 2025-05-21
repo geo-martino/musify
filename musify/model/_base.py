@@ -1,7 +1,26 @@
 from functools import cached_property
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, RootModel, Field, ConfigDict
+from pydantic import BaseModel, RootModel, Field, ConfigDict, TypeAdapter
+from pydantic.fields import ComputedFieldInfo
+
+
+def writeable_computed_field(name: str) -> property:
+    """Create a new writeable computed_field for an attribute with the given ``name``."""
+    name = f"__{name.lstrip("_")}"
+
+    def fget(self) -> Any:
+        field: ComputedFieldInfo = self.model_computed_fields[name.lstrip("_")]
+        value = getattr(self, name, None)
+        TypeAdapter(field.return_type).validate_python(value)  # validate return
+        return value
+
+    def fset(self, value) -> None:
+        field: ComputedFieldInfo = self.model_computed_fields[name.lstrip("_")]
+        value = TypeAdapter(field.return_type).validate_python(value)
+        setattr(self, name, value)
+
+    return property(fget, fset)
 
 
 class MusifyModel(BaseModel):
@@ -18,6 +37,17 @@ class MusifyModel(BaseModel):
     #     # description="A map of tags that have been cleaned to use when matching/searching",
     #     default_factory=dict,
     # )
+
+    def __init__(self, **kwargs):
+        # Allow setting writeable computed fields on init
+        computed_field_values = {}
+        for field in self.model_computed_fields.keys() & kwargs.keys():
+            if getattr(self.__class__, field).fset and field in kwargs:
+                computed_field_values[field] = kwargs.pop(field)
+
+        super().__init__(**kwargs)
+        for field, value in computed_field_values.items():
+            setattr(self, field, value)
 
 
 class MusifyRootModel[T](RootModel[T]):

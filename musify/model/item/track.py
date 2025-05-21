@@ -26,16 +26,16 @@ class Track[RT: Artist, AT: Album, GT: Genre](
         description="The position this track has on the album it is featured on.",
         default=None,
     )
+    disc: Position | None = Field(
+        description="The position of the disc in the album that this track is featured on.",
+        default=None,
+    )
     bpm: float | None = Field(
         description="The tempo of this track.",
         default=None,
     )
     key: KeySignature | None = Field(
         description="The key of this track.",
-        default=None,
-    )
-    disc: Position | None = Field(
-        description="The position of the disc on the album that this track is featured on.",
         default=None,
     )
     comments: list[str] | None = Field(
