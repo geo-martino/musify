@@ -15,7 +15,6 @@ from typing import Any, Self
 from aiorequestful.types import UnitCollection, UnitIterable
 
 from musify.field import Fields, TagField, TagFields
-from musify.file.exception import UnexpectedPathError
 from musify.model.collection import MusifyCollection
 from musify.model.object import Library, Folder
 from musify.model.genre import Genre

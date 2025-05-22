@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import Hashable
 from functools import cached_property
 from typing import Any, ClassVar
 
@@ -106,7 +107,7 @@ class MusifyResource(MusifyModel):
         }
 
     @cached_property
-    def unique_keys(self) -> set[Any]:
+    def unique_keys(self) -> set[Hashable]:
         """Get the keys to match on from the matchable attributes of this model"""
         values = {getattr(self, key) for key in self._unique_attribute_keys}
         if None in values:

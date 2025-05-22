@@ -9,7 +9,7 @@ import pytest
 
 from musify.field import Fields
 from musify.file.exception import InvalidFileType
-from musify.file.path_mapper import PathMapper, PathStemMapper
+from musify.model.properties.file import PathMapper, PathStemMapper
 from musify.libraries.local.library import MusicBee, LocalLibrary
 from musify.libraries.local.library.musicbee import REQUIRED_MODULES
 from musify.libraries.local.playlist import XAutoPF

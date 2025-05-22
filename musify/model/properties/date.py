@@ -37,7 +37,7 @@ class SparseDate(MusifyModel):
 
 class HasReleaseDate(_AttributeModel):
     """Represents a resource that has an associated release date."""
-    release: SparseDate | None = Field(
-        description="The date this resource was released.",
+    released_at: SparseDate | None = Field(
+        description="The date this item was released.",
         default=None,
     )

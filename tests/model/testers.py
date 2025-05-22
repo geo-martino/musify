@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections.abc import Hashable
 
 from musify.model import MusifyModel, MusifyRootModel, MusifyResource
 
@@ -39,6 +40,8 @@ class UniqueKeyTester(MusifyModelTester, metaclass=ABCMeta):
                 continue
 
             assert value in model.unique_keys, f"Value {value} not found in unique keys"
+            assert isinstance(value, Hashable)
+
             try:
                 setattr(model, key, None)
                 assert value not in model.unique_keys, f"Value {value} should not be in unique keys after removing it"

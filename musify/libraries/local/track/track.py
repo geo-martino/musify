@@ -332,7 +332,7 @@ class LocalTrack[T: mutagen.FileType, U: TagReader, V: TagWriter](LocalItem, Tra
         try:
             return self._reader.file.info.bits_per_sample
         except AttributeError:
-            return None
+            return
 
     @property
     def sample_rate(self) -> float:

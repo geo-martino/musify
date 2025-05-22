@@ -13,9 +13,8 @@ from urllib.parse import quote, unquote
 
 from aiorequestful.types import Number
 
-from musify.file.base import File
+from musify.model.properties.file import File, PathMapper, PathStemMapper
 from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
-from musify.file.path_mapper import PathMapper, PathStemMapper
 from musify.libraries.local.exception import MusicBeeIDError, XMLReaderError
 from musify.libraries.local.library.library import LocalLibrary
 from musify.libraries.local.playlist import LocalPlaylist

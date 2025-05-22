@@ -6,7 +6,7 @@ from random import sample, shuffle, randrange, choice
 import pytest
 
 from musify.field import TagFields
-from musify.file.path_mapper import PathStemMapper, PathMapper
+from musify.model.properties.file import PathMapper, PathStemMapper
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.local.track.field import LocalTrackField
 from musify.processors.base import Filter

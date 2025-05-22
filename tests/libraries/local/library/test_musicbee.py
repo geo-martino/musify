@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from musify.file.exception import FileDoesNotExistError
-from musify.file.path_mapper import PathMapper
+from musify.model.properties.file import PathMapper
 from musify.libraries.local.library import LocalLibrary, MusicBee
 from musify.libraries.local.library.musicbee import XMLLibraryParser, REQUIRED_MODULES
 from musify.libraries.local.track import LocalTrack

@@ -133,7 +133,7 @@ class SpotifyTrack(SpotifyItem, RemoteTrack):
         is_minor: bool = self.response["audio_features"]["mode"] == 0
 
         if not key:
-            return None
+            return
         elif '/' in key:
             key_sep = key.split('/')
             return f"{key_sep[0]}{'m'*is_minor}/{key_sep[1]}{'m'*is_minor}"

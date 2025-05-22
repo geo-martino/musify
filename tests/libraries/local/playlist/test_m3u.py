@@ -5,7 +5,7 @@ from random import randrange
 import pytest
 
 from musify.file.exception import InvalidFileType
-from musify.file.path_mapper import PathMapper, PathStemMapper
+from musify.model.properties.file import PathMapper, PathStemMapper
 from musify.libraries.local.playlist import M3U
 from musify.libraries.local.track import LocalTrack
 from tests.libraries.local.playlist.testers import LocalPlaylistTester

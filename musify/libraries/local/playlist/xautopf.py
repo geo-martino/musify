@@ -11,8 +11,7 @@ from musify.base import Result
 from musify.model._base import MusifyResource
 from musify.exception import FieldError, MusifyImportError
 from musify.field import Fields, Field, TagFields
-from musify.file.base import File
-from musify.file.path_mapper import PathMapper
+from musify.model.properties.file import File, PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler

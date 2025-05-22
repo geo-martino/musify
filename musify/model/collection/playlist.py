@@ -22,15 +22,15 @@ class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasURI, HasLength, Has
     type: ClassVar[str] = "playlist"
 
     description: StrippedString | None = Field(
-        description="The description of this playlist.",
+        description="The description of the playlist.",
         default=None,
     )
-    created: SparseDate | None = Field(
-        description="The date this playlist was created.",
+    created_at: SparseDate | None = Field(
+        description="The date that the playlist was created.",
         default=None,
     )
-    modified: SparseDate | None = Field(
-        description="The date this playlist was modifed.",
+    modified_at: SparseDate | None = Field(
+        description="The date that the playlist was last modified.",
         default=None,
     )
 
