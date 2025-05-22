@@ -33,7 +33,7 @@ class URI(MusifyRootModel[str], metaclass=ABCMeta):
     @model_validator(mode="after")
     def _validate_source(self) -> Self:
         if self._source and self.source != self._source:
-            raise ValueError(
+            raise MusifyValueError(
                 f"Given URI does not belong to this {self._source!r} repository type. Found: {self.source!r}"
             )
         return self
@@ -178,7 +178,9 @@ class HasMutableURI(HasURI):
         if not isinstance(uri, URI):
             raise MusifyValueError("URI must be a RemoteURI instance")
 
-        if self.source is not None and uri.source != self.source:
+        if self.source is None:
+            self.source = uri.source
+        elif uri.source != self.source:
             raise MusifyValueError(f"Cannot set URI from {uri.source} to {self.source}")
 
         for idx, existing in enumerate(self.uris):  # replace matching source URI in-place at same position

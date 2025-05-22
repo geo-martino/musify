@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import PositiveInt, Field
+from pydantic import PositiveInt, Field, model_validator, TypeAdapter
 
 from musify.model import MusifyModel
 from musify.model._base import _AttributeModel
@@ -28,11 +28,48 @@ class SparseDate(MusifyModel):
         default=None,
     )
 
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @staticmethod
+    def _from_date(value: Any) -> Any:
+        try:
+            dt = TypeAdapter(date).validate_python(value)
+            return dict(year=dt.year, month=dt.month, day=dt.day)
+        except ValueError:
+            pass
+
+        return value
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @staticmethod
+    def _from_string(value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+
+        value = iter(value.split("-"))
+        return dict(year=next(value, None), month=next(value, None), day=next(value, None))
+
     @property
     def date(self) -> date | None:
         """A :py:class:`date` object representing the full date definition if available."""
         if self.year and self.month and self.day:
             return date(self.year, self.month, self.day)
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if isinstance(other, date):
+            return self.date == other
+        if isinstance(other, str):
+            try:
+                dt = TypeAdapter(date).validate_python(other)
+                return self.__eq__(dt)
+            except ValueError:
+                return False
+
+        return super().__eq__(other)
+
 
 
 class HasReleaseDate(_AttributeModel):

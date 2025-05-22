@@ -27,6 +27,15 @@ class Position(MusifyModel):
             return value
         return dict(number=int(value))
 
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @classmethod
+    def _from_string(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        numbers = iter(value.split("/"))
+        return dict(number=next(numbers), total=next(numbers, None))
+
     @model_validator(mode="after")
     def _validate_position_is_less_than_total(self) -> Self:
         if self.number is None or self.total is None:

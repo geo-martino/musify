@@ -20,9 +20,13 @@ class TestMusifySequence:
         assert sequence._items
         return sequence
 
-    def test_validate_pydantic_schema(self, sequence: MusifySequence, models: list[MusifyResource], faker: Faker) -> None:
-        adapter = TypeAdapter(MusifySequence)
+    @pytest.fixture
+    def adapter(self) -> TypeAdapter:
+        return TypeAdapter(MusifySequence)
 
+    def test_validate_pydantic_schema(
+            self, sequence: MusifySequence, adapter: TypeAdapter, models: list[MusifyResource], faker: Faker
+    ) -> None:
         assert adapter.validate_python(sequence) is sequence, "Failed to validate existing model"
 
         sequence_single = MusifySequence([models[0]])

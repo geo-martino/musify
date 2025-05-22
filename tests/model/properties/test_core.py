@@ -1,3 +1,5 @@
+from random import choice
+
 import pytest
 
 from musify.model import MusifyModel
@@ -11,10 +13,15 @@ class TestHasSeparableTags(MusifyResourceTester):
         return HasSeparableTags()
 
     def test_join_tags(self) -> None:
-        tags = ["tag1", "tag2", "tag3"]
-        assert HasSeparableTags._join_tags(tags) == HasSeparableTags._tag_sep.join(tags)
+        tags = [f"tag{i}" for i in range(10)]
+
+        HasSeparableTags._tag_sep = ("/", ";")
+        assert HasSeparableTags._join_tags(tags) == "/".join(tags), "Should only join on first item in the sequence"
 
     def test_separate_tags(self) -> None:
-        tags = ["tag1", "tag2", "tag3"]
-        tag_string = HasSeparableTags._tag_sep.join(tags)
-        assert HasSeparableTags._separate_tags(tag_string) == tags
+        tags = [f"tag{i}" for i in range(10)]
+
+        seps = ("/", ";")
+        HasSeparableTags._tag_sep = ("/", ";")
+        tags_joined = "".join(tag + choice(seps) for tag in tags).rstrip("".join(seps))
+        assert HasSeparableTags._separate_tags(tags_joined) == tags

@@ -12,9 +12,9 @@ class TestHasName(MusifyResourceTester):
     def model(self) -> MusifyModel:
         return HasName(name="Test Name")
 
-    def test_from_name(self, faker: Faker):
+    def test_from_name(self, adapter: TypeAdapter, faker: Faker):
         name = faker.word()
-        model = TypeAdapter(HasName).validate_python(name)
+        model = adapter.validate_python(name)
         assert model.name == name
 
     def test_rich_comparison_dunder_methods(self) -> None:

@@ -20,9 +20,13 @@ class TestMusifyMapping:
         assert mapping._items
         return mapping
 
-    def test_validate_pydantic_schema(self, mapping: MusifyMapping, models: list[MusifyResource], faker: Faker) -> None:
-        adapter = TypeAdapter(MusifyMapping)
+    @pytest.fixture
+    def adapter(self) -> TypeAdapter:
+        return TypeAdapter(MusifyMapping)
 
+    def test_validate_pydantic_schema(
+            self, mapping: MusifyMapping, adapter: TypeAdapter, models: list[MusifyResource], faker: Faker
+    ) -> None:
         assert adapter.validate_python(mapping) is mapping, "Failed to validate existing model"
 
         mapping_single = MusifyMapping({key: models[0] for key in models[0].unique_keys})

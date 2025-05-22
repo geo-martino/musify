@@ -1,12 +1,17 @@
 import datetime
 import itertools
+import re
 import string
 from collections.abc import Iterable, Collection, Iterator
 from pathlib import Path
 from random import choice, randrange, sample
-from typing import Any
+from typing import Any, Self
 from uuid import uuid4
 
+from pydantic_core.core_schema import ValidatorFunctionWrapHandler
+from yarl import URL
+
+from musify.model.properties.uri import URI
 from musify.types import MusifyEnum
 
 path_tests = Path(__file__).parent
@@ -139,3 +144,46 @@ def split_list[T](lst: Collection[T], n: int, overlap: int = 0) -> Iterator[list
         yield item + overlap_batch
 
     yield overlap_result
+
+
+class SimpleURI(URI):
+    _source = None  # disable validation
+
+    @property
+    def source(self) -> str:
+        return self.root.split(":")[0]
+
+    @property
+    def type(self) -> str:
+        return self.root.split(":")[1]
+
+    @property
+    def id(self) -> str:
+        return self.root.split(":")[2]
+
+    @classmethod
+    def from_id[T](cls, value: T, kind: str, source: str = None) -> T | Self:
+        uri = ":".join((source or cls._source, kind, str(value)))
+        return cls(uri)
+
+    @property
+    def href(self) -> URL:
+        return URL.build(scheme="https", host="example.com", path=f"/api/{self.type}/{self.id}")
+
+    @classmethod
+    def from_href[T](cls, value: T, handler: ValidatorFunctionWrapHandler) -> T | Self:
+        return cls.from_url(value, handler)
+
+    @property
+    def url(self) -> URL:
+        return URL.build(scheme="https", host="example.com", path=f"/{self.type}/{self.id}")
+
+    @classmethod
+    def from_url[T](cls, value: T, handler: ValidatorFunctionWrapHandler) -> T | Self:
+        if isinstance(value, str) and re.match(r"^https://example.com", value):
+            value = URL(value)
+        if not isinstance(value, URL):
+            return value
+
+        uri = ":".join((cls._source, *value.path.split("/")[:-2]))
+        return handler(uri)

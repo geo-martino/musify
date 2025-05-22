@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Annotated, Any
 
-from pydantic import Field, field_validator, computed_field
+from pydantic import Field, field_validator, computed_field, model_validator
 
 from musify.model import MusifyModel
 
@@ -19,6 +19,14 @@ class KeySignature(MusifyModel):
     mode: Annotated[int, Field(ge=0, le=1)] = Field(
         description="The mode of this track.",
     )
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @classmethod
+    def _from_key(cls, value: str) -> Any:
+        if not isinstance(value, str):
+            return value
+        return dict(root=cls._get_root_index_from_key(value), mode=cls._get_mode_index_from_key(value))
 
     # noinspection PyNestedDecorators
     @field_validator("root", mode="before", check_fields=True)

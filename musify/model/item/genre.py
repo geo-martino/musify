@@ -20,7 +20,7 @@ class Genre(HasName):
 
 
 class HasGenres[T: Genre](HasSeparableTags):
-    genres: list[T] = Field(
+    genres: list[T] | None = Field(
         description="The genres associated with this resource.",
         default_factory=list[T],
         validation_alias="genre",

@@ -21,11 +21,11 @@ class TestHasGenres(MusifyResourceTester):
         return HasGenres(genres=genres)
 
     def test_from_string(self, genres: list[Genre]):
-        genre = HasGenres._tag_sep.join(genre.name for genre in genres)
+        genre = HasGenres._join_tags(genre.name for genre in genres)
         model = HasGenres(genre=genre)
         assert [genre.name for genre in model.genres] == [genre.name for genre in genres]
 
     def test_to_string(self, genres: list[Genre]):
-        genre = HasGenres._tag_sep.join(genre.name for genre in genres)
+        genre = HasGenres._join_tags(genre.name for genre in genres)
         model = HasGenres(genre=genres)
         assert model.genre == genre

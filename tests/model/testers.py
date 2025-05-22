@@ -1,6 +1,9 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Hashable
 
+import pytest
+from pydantic import TypeAdapter
+
 from musify.model import MusifyModel, MusifyRootModel, MusifyResource
 
 
@@ -9,6 +12,11 @@ class MusifyModelTester(metaclass=ABCMeta):
     def model(self, **kwargs) -> MusifyModel | MusifyRootModel:
         """Fixture for the model to test"""
         raise NotImplementedError
+
+    @pytest.fixture
+    def adapter(self, model: MusifyModel | MusifyRootModel) -> TypeAdapter:
+        """Fixture for the type adapter to use when validating python objects for this model"""
+        return TypeAdapter(model.__class__)
 
 
 class MusifyResourceTester(MusifyModelTester, metaclass=ABCMeta):

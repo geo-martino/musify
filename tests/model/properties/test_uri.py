@@ -5,7 +5,7 @@ import pytest
 from musify.exception import MusifyValueError
 from musify.model import MusifyRootModel, MusifyModel
 from musify.model.properties.uri import URI, HasURI, HasMutableURI
-from tests.model.conftest import SimpleURI
+from tests.utils import SimpleURI
 from tests.model.testers import MusifyModelTester, UniqueKeyTester
 
 
@@ -107,6 +107,13 @@ class TestHasMutableURI(UniqueKeyTester):
             model.uri = str(model.uri)
         with pytest.raises(MusifyValueError):
             model.uri = different_uri
+
+    def test_set_uri_sets_source(self, model: HasMutableURI, uris: list[URI]):
+        model.source = None  # no current source, should set source from URI
+        uri = choice(uris)
+
+        model.uri = uri
+        assert model.source == uri.source
 
     def test_delete_uri(self, model: HasMutableURI, uris: list[URI]):
         uri = model.uri

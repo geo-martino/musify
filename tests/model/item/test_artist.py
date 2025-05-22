@@ -19,11 +19,11 @@ class TestHasArtists(MusifyResourceTester):
         return HasArtists(artists=artists)
 
     def test_from_string(self, artists: list[Artist]):
-        artist = HasArtists._tag_sep.join(artist.name for artist in artists)
+        artist = HasArtists._join_tags(artist.name for artist in artists)
         model = HasArtists(artist=artist)
         assert [artist.name for artist in model.artists] == [artist.name for artist in artists]
 
     def test_to_string(self, artists: list[Artist]):
-        artist = HasArtists._tag_sep.join(artist.name for artist in artists)
+        artist = HasArtists._join_tags(artist.name for artist in artists)
         model = HasArtists(artist=artists)
         assert model.artist == artist

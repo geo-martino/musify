@@ -15,7 +15,7 @@ from musify.model.properties.rating import HasRating
 from musify.model.properties.image import HasImages
 from musify.model.properties.date import HasReleaseDate
 from musify.model.properties.order import Position
-from musify.model.properties.audio import KeySignature
+from musify.model.properties.music import KeySignature
 
 
 class Track[RT: Artist, AT: Album, GT: Genre](
@@ -47,6 +47,7 @@ class Track[RT: Artist, AT: Album, GT: Genre](
     comments: list[str] | None = Field(
         description="Freeform comments that are associated with this track.",
         default=None,
+        alias="comment",
     )
 
     @model_validator(mode="after")

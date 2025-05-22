@@ -8,11 +8,12 @@ from typing import Any, Collection, Iterable
 
 from pydantic import Field, computed_field, AliasChoices, field_validator, PositiveInt, model_validator
 
+from musify.exception import MusifyValueError
 from musify.model._base import _AttributeModel, MusifyModel
 
 
 class _IsFile(_AttributeModel):
-    path: PurePath = Field(
+    path: Path = Field(
         description="The path to the file"
     )
     format: str = Field(
@@ -25,9 +26,7 @@ class _IsFile(_AttributeModel):
     @model_validator(mode="before")
     @staticmethod
     def _determine_format_from_path[T](value: T) -> T | str:
-        if not isinstance(value, dict):
-            return value
-        if (path := value["path"]) is None:
+        if not isinstance(value, dict) or "format" in value or (path := value.get("path")) is None:
             return value
         return value | {"format": PurePath(str(path)).suffix.lstrip(".")}
 
@@ -202,7 +201,7 @@ class PathStemMapper(PathMapper):
         if isinstance(value, str | PurePath):
             value = [value]
         elif not isinstance(value, Iterable):
-            raise ValueError(f"Unrecognised input type: {value!r}")
+            raise MusifyValueError(f"Unrecognised input type: {value!r}")
 
         return {path.casefold(): path for path in map(str, value)}
 
@@ -215,7 +214,7 @@ class PathStemMapper(PathMapper):
         if isinstance(value, Mapping):
             value = value.items()
         elif not isinstance(value, Iterable):
-            raise ValueError(f"Unrecognised input type: {value!r}")
+            raise MusifyValueError(f"Unrecognised input type: {value!r}")
 
         return {str(k): str(v) for k, v in value}
 

@@ -55,7 +55,6 @@ class MusifyModel(BaseModel):
         validate_assignment=True,
         validate_by_name=True,
         validate_by_alias=True,
-        extra="forbid",
     )
     # TODO: figure this out
     # _clean_tags: dict[TagField, Any] = PrivateAttr(
