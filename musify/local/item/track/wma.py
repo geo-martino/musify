@@ -122,11 +122,13 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
                 attribute = attribute.value
 
             id3_type, size = struct.unpack_from(b"<bi", attribute)
+
             id3_types = {
                 int(val) for val in vars(mutagen.id3.PictureType).values() if isinstance(val, mutagen.id3.PictureType)
             }
-            if id3_type not in id3_types:
-                # bytes does not have WMA-spec header, assume bytes are raw image data
+            if id3_type not in id3_types:  # first byte gives the id3 picture type in WMA-spec header
+                # assume bytes don't contain WMA-spec header
+                # assume bytes are raw image data
                 values_converted.append(attribute)
                 continue
 
