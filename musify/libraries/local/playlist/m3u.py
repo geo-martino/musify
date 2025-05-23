@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Self
 
 from musify.base import Result
-from musify.model.properties.file import File, PathMapper
 from musify.libraries.local.playlist.base import LocalPlaylist
 from musify.libraries.local.track import LocalTrack, load_track
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
+from musify.model.properties.file import File, PathMapper
 from musify.processors.filter import FilterDefinedList
 
 

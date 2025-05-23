@@ -9,8 +9,8 @@ from aiorequestful.cache.exception import CacheError
 from aiorequestful.cache.session import CachedSession
 from yarl import URL
 
-from musify.libraries.remote.core.exception import APIError
 from musify._types import Resource
+from musify.libraries.remote.core.exception import APIError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from tests.libraries.remote.spotify.api.mock import SpotifyMock
 from tests.libraries.remote.spotify.api.testers import SpotifyAPIFixtures

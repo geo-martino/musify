@@ -8,12 +8,12 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self
 
-from musify.model._base import MusifyResource
+from musify._types import Resource
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.exception import APIError
 from musify.libraries.remote.core.types import APIInputValueSingle
-from musify._types import Resource
+from musify.model._base import MusifyResource
 
 
 class RemoteObject[T: (RemoteAPI | None)](RemoteResponse, metaclass=ABCMeta):

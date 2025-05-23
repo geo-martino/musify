@@ -1,7 +1,7 @@
 from typing import Annotated
 
-from pydantic import StringConstraints
 from annotated_types import MinLen
+from pydantic import StringConstraints
 
 type Character = Annotated[str, StringConstraints(min_length=1, max_length=1)]
 type StrippedCharacter = Annotated[str, StringConstraints(min_length=1, max_length=1, strip_whitespace=True)]

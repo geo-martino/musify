@@ -12,14 +12,14 @@ from typing import Any
 from urllib.parse import quote, unquote
 
 from aiorequestful.types import Number
-
-from musify.model.properties.file import File, PathMapper, PathStemMapper
 from musify.file.exception import FileDoesNotExistError, UnexpectedPathError
 from musify.libraries.local.exception import MusicBeeIDError, XMLReaderError
+
 from musify.libraries.local.library.library import LocalLibrary
 from musify.libraries.local.playlist import LocalPlaylist
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
+from musify.model.properties.file import File, PathMapper, PathStemMapper
 from musify.processors.base import Filter
 from musify.utils import to_collection, required_modules_installed
 

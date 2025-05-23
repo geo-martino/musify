@@ -7,9 +7,9 @@ from faker import Faker
 from pydantic import TypeAdapter
 
 from musify.model import MusifyResource
-from musify.model.sequence import MusifySequence, MusifyMutableSequence
 from musify.model.item.artist import Artist
 from musify.model.item.track import Track
+from musify.model.sequence import MusifySequence, MusifyMutableSequence
 from tests.utils import split_list
 
 

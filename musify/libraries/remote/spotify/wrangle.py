@@ -7,14 +7,14 @@ from typing import Any
 from aiorequestful.types import URLInput
 from yarl import URL
 
+from musify._types import Resource
 from musify.exception import MusifyEnumError
-from musify.model.collection import MusifyCollection
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.libraries.remote.spotify import SOURCE_NAME
+from musify.model.collection import MusifyCollection
 from musify.utils import to_collection
 
 

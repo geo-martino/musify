@@ -9,10 +9,10 @@ from typing import Any
 from yarl import URL
 
 from musify import PROGRAM_NAME, PROGRAM_URL
+from musify._types import Resource
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import APIError, RemoteIDTypeError
 from musify.libraries.remote.core.types import APIInputValueSingle, RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 

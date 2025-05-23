@@ -8,9 +8,9 @@ from pydantic import TypeAdapter
 
 from musify.exception import MusifyKeyError
 from musify.model import MusifyResource
-from musify.model.mapping import MusifyMapping, MusifyMutableMapping
 from musify.model.item.artist import Artist
 from musify.model.item.track import Track
+from musify.model.mapping import MusifyMapping, MusifyMutableMapping
 
 
 class TestMusifyMapping:

@@ -17,9 +17,9 @@ from aiorequestful.response.payload import JSONPayloadHandler
 from aiorequestful.types import UnitSequence, UnitList, ImmutableJSON, JSON
 from yarl import URL
 
+from musify._types import Resource
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
 from musify.utils import align_string, to_collection

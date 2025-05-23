@@ -4,8 +4,8 @@ Implements a :py:class:`RemoteLibrary` for Spotify.
 from collections.abc import Collection, Iterable
 from typing import Any
 
-from musify.libraries.remote.core.library import RemoteLibrary
 from musify._types import Resource
+from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist

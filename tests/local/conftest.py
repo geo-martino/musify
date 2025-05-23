@@ -8,7 +8,6 @@ from musify.local.item.artist import LocalArtist
 from musify.local.item.genre import LocalGenre
 from musify.local.item.track import LocalTrack
 from musify.model import MusifyResource
-from musify.model.properties.uri import URI
 from tests.utils import GENRES
 
 

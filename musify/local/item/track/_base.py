@@ -1,14 +1,10 @@
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection
 from typing import Self, Any
 
 import mutagen
-from pydantic import AliasChoices, field_validator
-from pydantic.fields import FieldInfo
-from pydantic_core.core_schema import ValidationInfo, ValidatorFunctionWrapHandler
+from pydantic import field_validator
 
-from musify.exception import MusifyValueError
 from musify.local._base import LocalResource
-from musify.local.exception import TagError
 from musify.local.item.album import LocalAlbum
 from musify.local.item.artist import LocalArtist
 from musify.local.item.genre import LocalGenre

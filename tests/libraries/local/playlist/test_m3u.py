@@ -3,11 +3,11 @@ from pathlib import Path
 from random import randrange
 
 import pytest
-
 from musify.file.exception import InvalidFileType
-from musify.model.properties.file import PathMapper, PathStemMapper
+
 from musify.libraries.local.playlist import M3U
 from musify.libraries.local.track import LocalTrack
+from musify.model.properties.file import PathMapper, PathStemMapper
 from tests.libraries.local.playlist.testers import LocalPlaylistTester
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.local.utils import path_playlist_m3u

@@ -9,9 +9,9 @@ import pytest
 from aiorequestful.cache.backend import ResponseCache, SQLiteCache
 from yarl import URL
 
+from musify._types import Resource
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.factory import RemoteObjectFactory
-from musify._types import Resource
 from tests.libraries.remote.core.utils import RemoteMock
 from tests.utils import random_str
 

@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any, Self
 
 from musify.base import Result
-from musify.model.properties.file import IsFile, PathMapper
-from musify.model.collection.playlist import Playlist
 from musify.libraries.local.collection import LocalCollection
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
+from musify.model.collection.playlist import Playlist
+from musify.model.properties.file import PathMapper
 from musify.processors.base import Filter
 from musify.processors.limit import ItemLimiter
 from musify.processors.sort import ItemSorter

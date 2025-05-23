@@ -9,8 +9,8 @@ from aioresponses import aioresponses
 from aioresponses.core import RequestCall
 from yarl import URL
 
-from musify.libraries.remote.core.types import RemoteIDType
 from musify._types import Resource
+from musify.libraries.remote.core.types import RemoteIDType
 
 ALL_ID_TYPES = RemoteIDType.all()
 ALL_ITEM_TYPES = Resource.all()

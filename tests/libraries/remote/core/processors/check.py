@@ -7,10 +7,10 @@ from random import randrange, choice, sample
 import pytest
 from pytest_mock import MockerFixture
 
+from musify._types import Resource
 from musify.libraries.collection import BasicCollection
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.object import RemotePlaylist
-from musify._types import Resource
 from musify.processors.check import RemoteItemChecker
 from tests.conftest import LogCapturer
 from tests.libraries.local.track.utils import random_track, random_tracks

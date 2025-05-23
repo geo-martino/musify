@@ -1,12 +1,7 @@
-import re
-from random import choice, sample
-from typing import Any, Self
+from random import sample
 
 import pytest
 from faker import Faker
-from pydantic import model_validator
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler
-from yarl import URL
 
 from musify.model import MusifyResource
 from musify.model.collection.playlist import Playlist, MutablePlaylist

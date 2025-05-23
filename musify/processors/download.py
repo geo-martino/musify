@@ -10,9 +10,9 @@ from webbrowser import open as webopen
 
 from aiorequestful.types import UnitIterable
 
-from musify.model._base import MusifyObject, MusifyResource
 from musify.exception import MusifyEnumError
 from musify.field import Field, Fields
+from musify.model._base import MusifyObject, MusifyResource
 from musify.model.collection import MusifyCollection
 from musify.processors.base import InputProcessor
 from musify.utils import to_collection

@@ -11,16 +11,16 @@ from typing import Any, Self
 
 from aiorequestful.types import UnitIterable
 
+from musify._types import Resource
 from musify.base import Result
-from musify.model._base import MusifyObject, MusifyItemSettable
 from musify.exception import MusifyAttributeError
 from musify.field import TagField, TagFields as Tag
-from musify.model.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.factory import RemoteObjectFactory
-from musify._types import Resource
 from musify.logger import MusifyLogger
 from musify.logger import REPORT
+from musify.model._base import MusifyObject, MusifyItemSettable
+from musify.model.collection import MusifyCollection
 from musify.processors.base import Processor
 from musify.processors.match import ItemMatcher
 from musify.utils import align_string, get_max_width

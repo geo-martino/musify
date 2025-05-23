@@ -11,10 +11,10 @@ from typing import Any
 
 from aiorequestful.types import UnitIterable
 
-from musify.model._base import MusifyObject
 from musify.field import TagField, TagFields as Tag, ALL_TAG_FIELDS
-from musify.model.collection import MusifyCollection
 from musify.logger import MusifyLogger
+from musify.model._base import MusifyObject
+from musify.model.collection import MusifyCollection
 from musify.printer import PrettyPrinter
 from musify.processors.base import Processor
 from musify.utils import limit_value, to_collection

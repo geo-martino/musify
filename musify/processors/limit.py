@@ -7,10 +7,11 @@ from operator import mul
 from random import shuffle
 
 from musify.model._properties import HasLength
-from musify.model._base import MusifyResource
-from musify.field import Fields
-from musify.model.properties.file import File
 from musify.model.track import Track
+
+from musify.field import Fields
+from musify.model._base import MusifyResource
+from musify.model.properties.file import File
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import LimiterProcessorError
 from musify.processors.sort import ItemSorter

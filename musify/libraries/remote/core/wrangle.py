@@ -7,10 +7,10 @@ from collections.abc import Mapping
 from aiorequestful.types import URLInput
 from yarl import URL
 
+from musify._types import Resource
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValueSingle, APIInputValueMulti, RemoteIDType
-from musify._types import Resource
 
 
 class RemoteDataWrangler(metaclass=ABCMeta):

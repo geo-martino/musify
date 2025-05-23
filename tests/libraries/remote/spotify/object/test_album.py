@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 from aiorequestful.types import Number
 
-from musify.libraries.remote.core.exception import RemoteError, APIError, RemoteObjectTypeError
 from musify._types import Resource
+from musify.libraries.remote.core.exception import RemoteError, APIError, RemoteObjectTypeError
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyAlbum, SpotifyTrack
 from tests.libraries.remote.spotify.api.mock import SpotifyMock

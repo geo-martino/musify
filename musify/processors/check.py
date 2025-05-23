@@ -13,17 +13,17 @@ from dataclasses import dataclass, field
 from typing import Any, Self
 
 from musify import PROGRAM_NAME
+from musify._types import Resource
 from musify.base import Result
-from musify.model._base import MusifyItemSettable
 from musify.field import Fields
-from musify.model.collection import MusifyCollection
 from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.core.factory import RemoteObjectFactory
 from musify.libraries.remote.core.object import RemotePlaylist
 from musify.libraries.remote.core.types import RemoteIDType
-from musify._types import Resource
 from musify.logger import MusifyLogger
 from musify.logger import REPORT
+from musify.model._base import MusifyItemSettable
+from musify.model.collection import MusifyCollection
 from musify.processors.base import InputProcessor
 from musify.processors.match import ItemMatcher
 from musify.processors.search import RemoteItemSearcher

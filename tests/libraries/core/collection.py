@@ -4,12 +4,12 @@ from copy import deepcopy
 
 import pytest
 
-from musify.model._base import MusifyResource
 from musify.exception import MusifyTypeError
 from musify.libraries.collection import BasicCollection
-from musify.model.collection import MusifyCollection
 from musify.libraries.remote.core.library import RemoteLibrary
 from musify.libraries.remote.core.object import RemoteCollectionLoader
+from musify.model._base import MusifyResource
+from musify.model.collection import MusifyCollection
 from musify.printer import PrettyPrinter
 from tests.testers import PrettyPrinterTester
 

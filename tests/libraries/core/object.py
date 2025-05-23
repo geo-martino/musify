@@ -4,12 +4,12 @@ from random import sample
 from typing import Iterable, Any
 
 import pytest
-
-from musify.model._base import MusifyResource
-from musify.exception import MusifyTypeError
-from musify.model.collection import MusifyCollection
 from musify.model.object import Playlist, Library
 from musify.model.track import Track
+
+from musify.exception import MusifyTypeError
+from musify.model._base import MusifyResource
+from musify.model.collection import MusifyCollection
 from tests.libraries.core.collection import MusifyCollectionTester
 from tests.testers import MusifyItemTester
 

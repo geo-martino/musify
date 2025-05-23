@@ -7,9 +7,9 @@ from abc import ABCMeta
 
 from yarl import URL
 
+from musify._types import Resource
 from musify.libraries.remote.core.base import RemoteObject, RemoteItem
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteError
-from musify._types import Resource
 from musify.libraries.remote.spotify.api import SpotifyAPI
 
 

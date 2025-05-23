@@ -3,9 +3,9 @@ Exceptions relating to remote operations.
 """
 from typing import Any
 
+from musify._types import Resource
 from musify.exception import MusifyError
 from musify.libraries.remote.core.types import RemoteIDType
-from musify._types import Resource
 
 
 class RemoteError(MusifyError):

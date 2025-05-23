@@ -13,20 +13,20 @@ from pathlib import Path
 from typing import Any, Self
 
 from aiorequestful.types import UnitCollection, UnitIterable
+from musify.libraries.local.exception import LocalCollectionError
+from musify.model.album import Album
+from musify.model.artist import Artist
+from musify.model.genre import Genre
+from musify.model.object import Library, Folder
+from musify.model.track import Track
 
 from musify.field import Fields, TagField, TagFields
-from musify.model.collection import MusifyCollection
-from musify.model.object import Library, Folder
-from musify.model.genre import Genre
-from musify.model.artist import Artist
-from musify.model.album import Album
-from musify.model.track import Track
 from musify.libraries.local.base import LocalItem
-from musify.libraries.local.exception import LocalCollectionError
 from musify.libraries.local.track import LocalTrack, SyncResultTrack, load_track, TRACK_FILETYPES
 from musify.libraries.local.track.field import LocalTrackField
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
 from musify.logger import MusifyLogger
+from musify.model.collection import MusifyCollection
 from musify.utils import get_most_common_values, to_collection, align_string, get_max_width
 
 _max_str = "z" * 50

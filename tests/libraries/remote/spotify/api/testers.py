@@ -4,8 +4,8 @@ import pytest
 from aiorequestful.cache.backend import ResponseCache
 from aiorequestful.cache.backend.base import ResponseRepository
 
-from musify.libraries.remote.core.api import RemoteAPI
 from musify._types import Resource
+from musify.libraries.remote.core.api import RemoteAPI
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from tests.libraries.remote.core.api import RemoteAPIFixtures

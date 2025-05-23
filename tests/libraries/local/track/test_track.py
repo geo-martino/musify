@@ -5,15 +5,15 @@ from random import choice
 
 import mutagen
 import pytest
-
-from musify.model._base import MusifyResource
-from musify.exception import MusifyKeyError
 from musify.file.exception import InvalidFileType, FileDoesNotExistError
 from musify.file.image import open_image
 from musify.model.track import Track
+
+from musify._types import Resource
+from musify.exception import MusifyKeyError
 from musify.libraries.local.track import LocalTrack, load_track, FLAC, M4A, MP3, WMA, SyncResultTrack
 from musify.libraries.local.track.field import LocalTrackField
-from musify._types import Resource
+from musify.model._base import MusifyResource
 from tests.libraries.core.object import TrackTester
 from tests.libraries.local.utils import path_track_all, path_track_img, path_track_resources
 from tests.libraries.remote.spotify.utils import random_uri

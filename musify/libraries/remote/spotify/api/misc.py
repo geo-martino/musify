@@ -8,8 +8,8 @@ from typing import Any
 
 from aiorequestful.types import Number
 
-from musify.libraries.remote.core.types import RemoteIDType
 from musify._types import Resource
+from musify.libraries.remote.core.types import RemoteIDType
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value
 

@@ -11,10 +11,10 @@ from typing import Any
 from aiorequestful.types import URLInput
 from yarl import URL
 
+from musify._types import Resource
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import APIError, RemoteObjectTypeError
 from musify.libraries.remote.core.types import APIInputValueMulti, RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.spotify.api.base import SpotifyAPIBase
 from musify.utils import limit_value, to_collection
 

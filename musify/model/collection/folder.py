@@ -4,8 +4,8 @@ from pydantic import Field, computed_field
 
 from musify._types import StrippedString
 from musify.model.item.track import Track, HasTracks
-from musify.model.properties.name import HasName
 from musify.model.properties.length import HasLength
+from musify.model.properties.name import HasName
 
 
 class Folder[TK, TV: Track](HasTracks[TK, TV], HasName, HasLength):

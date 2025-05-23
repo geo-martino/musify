@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from musify._types import Resource
 from musify.exception import MusifyEnumError
 from musify.field import TagFields as Tag
 from musify.libraries.local.collection import LocalAlbum
@@ -14,7 +15,6 @@ from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.exception import RemoteError, RemoteIDTypeError, RemoteObjectTypeError
 from musify.libraries.remote.core.types import RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.factory import SpotifyObjectFactory
 from musify.libraries.remote.spotify.object import SpotifyTrack, SpotifyAlbum, SpotifyPlaylist

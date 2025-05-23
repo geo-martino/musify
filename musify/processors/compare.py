@@ -11,8 +11,8 @@ from typing import Any
 
 from aiorequestful.types import UnitSequence
 
-from musify.model._base import MusifyResource
 from musify.field import Field
+from musify.model._base import MusifyResource
 from musify.processors.base import DynamicProcessor, dynamicprocessormethod
 from musify.processors.exception import ComparerError
 from musify.processors.time import TimeMapper

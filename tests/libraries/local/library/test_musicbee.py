@@ -4,13 +4,13 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
 from musify.file.exception import FileDoesNotExistError
-from musify.model.properties.file import PathMapper
+
 from musify.libraries.local.library import LocalLibrary, MusicBee
 from musify.libraries.local.library.musicbee import XMLLibraryParser, REQUIRED_MODULES
 from musify.libraries.local.track import LocalTrack
 from musify.libraries.remote.core.wrangle import RemoteDataWrangler
+from musify.model.properties.file import PathMapper
 from musify.processors.filter import FilterIncludeExclude, FilterDefinedList
 from musify.utils import required_modules_installed
 from tests.libraries.local.library.testers import LocalLibraryTester

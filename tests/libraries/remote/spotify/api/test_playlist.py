@@ -8,9 +8,9 @@ from aioresponses.core import RequestCall
 from yarl import URL
 
 from musify import PROGRAM_NAME
+from musify._types import Resource
 from musify.libraries.remote.core.exception import RemoteObjectTypeError, RemoteIDTypeError
 from musify.libraries.remote.core.types import RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.object import SpotifyPlaylist
 from tests.libraries.remote.core.api import RemoteAPIPlaylistTester

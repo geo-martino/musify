@@ -11,11 +11,11 @@ from typing import Any, Self
 
 from aiorequestful.types import UnitCollection
 
+from musify._types import Resource
 from musify.libraries.remote.core import RemoteResponse
 from musify.libraries.remote.core.object import RemoteCollectionLoader, RemoteTrack
 from musify.libraries.remote.core.object import RemotePlaylist, RemoteAlbum, RemoteArtist
 from musify.libraries.remote.core.types import APIInputValueSingle, RemoteIDType
-from musify._types import Resource
 from musify.libraries.remote.spotify.api import SpotifyAPI
 from musify.libraries.remote.spotify.base import SpotifyObject, SpotifyItem
 from musify.libraries.remote.spotify.exception import SpotifyCollectionError

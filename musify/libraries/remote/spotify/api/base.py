@@ -12,8 +12,8 @@ from aiorequestful.cache.session import CachedSession
 from aiorequestful.types import URLInput
 from yarl import URL
 
-from musify.libraries.remote.core.api import RemoteAPI
 from musify._types import Resource
+from musify.libraries.remote.core.api import RemoteAPI
 
 
 class SpotifyAPIBase(RemoteAPI[AuthorisationCodeFlow], metaclass=ABCMeta):

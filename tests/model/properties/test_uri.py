@@ -5,8 +5,8 @@ import pytest
 from musify.exception import MusifyValueError
 from musify.model import MusifyRootModel, MusifyModel
 from musify.model.properties.uri import URI, HasURI, HasMutableURI
-from tests.utils import SimpleURI
 from tests.model.testers import MusifyModelTester, UniqueKeyTester
+from tests.utils import SimpleURI
 
 
 class TestRemoteURI(MusifyModelTester):

@@ -7,14 +7,14 @@ from typing import ClassVar
 from pydantic import Field, validate_call
 
 from musify._types import StrippedString
-from musify.model.mapping import MusifyMapping, MusifyMutableMapping
 from musify.model._base import _CollectionModel
 from musify.model.item.track import Track, HasTracks, HasMutableTracks
-from musify.model.properties.name import HasName
-from musify.model.properties.length import HasLength
-from musify.model.properties.uri import HasURI
-from musify.model.properties.image import HasImages
+from musify.model.mapping import MusifyMapping, MusifyMutableMapping
 from musify.model.properties.date import SparseDate
+from musify.model.properties.image import HasImages
+from musify.model.properties.length import HasLength
+from musify.model.properties.name import HasName
+from musify.model.properties.uri import HasURI
 
 
 class Playlist[TK, TV: Track](HasTracks[TK, TV], HasName, HasURI, HasLength, HasImages):

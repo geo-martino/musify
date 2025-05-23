@@ -3,19 +3,19 @@ from typing import ClassVar, Self
 from pydantic import Field, model_validator, PositiveInt, computed_field
 
 from musify._types import StrippedString
-from musify.model.sequence import MusifyMutableSequence, MusifySequence
 from musify.model._base import _CollectionModel
 from musify.model.item.album import HasAlbum, Album
 from musify.model.item.artist import HasArtists, Artist
 from musify.model.item.genre import HasGenres, Genre
-from musify.model.properties.name import HasName
-from musify.model.properties.length import HasLength
-from musify.model.properties.uri import HasURI
-from musify.model.properties.rating import HasRating
-from musify.model.properties.image import HasImages
 from musify.model.properties.date import HasReleaseDate
-from musify.model.properties.order import Position
+from musify.model.properties.image import HasImages
+from musify.model.properties.length import HasLength
 from musify.model.properties.music import KeySignature
+from musify.model.properties.name import HasName
+from musify.model.properties.order import Position
+from musify.model.properties.rating import HasRating
+from musify.model.properties.uri import HasURI
+from musify.model.sequence import MusifyMutableSequence, MusifySequence
 
 
 class Track[RT: Artist, AT: Album, GT: Genre](

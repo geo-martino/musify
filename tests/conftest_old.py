@@ -12,7 +12,6 @@ from _pytest.fixtures import SubRequest
 # noinspection PyProtectedMember
 from _pytest.logging import LogCaptureHandler, _remove_ansi_escape_sequences
 from aiorequestful.types import UnitCollection
-from faker import Faker
 
 from musify import MODULE_ROOT
 from musify._types import Resource

@@ -4,15 +4,15 @@ from copy import copy
 from urllib.parse import unquote
 
 import pytest
+from musify.model.album import Album
 
-from musify.model._base import MusifyItemSettable
+from musify._types import Resource
 from musify.field import TagFields as Tag
 from musify.libraries.collection import BasicCollection
-from musify.model.collection import MusifyCollection
-from musify.model.album import Album
 from musify.libraries.local.collection import LocalAlbum
 from musify.libraries.local.track import LocalTrack
-from musify._types import Resource
+from musify.model._base import MusifyItemSettable
+from musify.model.collection import MusifyCollection
 from musify.processors.search import RemoteItemSearcher, SearchConfig
 from tests.libraries.local.track.utils import random_track, random_tracks
 from tests.libraries.remote.core.utils import RemoteMock

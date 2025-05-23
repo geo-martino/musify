@@ -2,7 +2,7 @@ import datetime
 import itertools
 import re
 import string
-from collections.abc import Iterable, Collection, Iterator
+from collections.abc import Collection, Iterator
 from pathlib import Path
 from random import choice, randrange, sample
 from typing import Any, Self
