@@ -1,8 +1,11 @@
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
+from io import BytesIO
+from pathlib import Path
 from typing import Self, Any
 
 import mutagen
-from pydantic import field_validator
+from PIL import Image
+from pydantic import field_validator, model_validator, validate_call
 
 from musify.local._base import LocalResource
 from musify.local.item.album import LocalAlbum
@@ -14,12 +17,47 @@ from musify.model.properties.uri import HasMutableURI
 
 
 class LocalTrack[T: mutagen.FileType](LocalResource, Track[LocalArtist, LocalAlbum, LocalGenre], IsFile, HasMutableURI):
-    def from_mutagen_file(self, file: T) -> Self:
-        pass
+    @classmethod
+    @validate_call
+    async def from_file(cls, path: str | Path) -> Self:
+        file = await cls._load_mutagen(path)
+        # some subclasses need to access the file obj on construction so just pass the file obj
+        # noinspection PyArgumentList
+        return cls.model_validate(file)
+
+    @classmethod
+    @validate_call
+    async def _load_mutagen(cls, path: str | Path) -> T:
+        # TODO: figure out how to load file asynchronously here to improve IO-bound performance
+        with Path(path).open("rb") as f:
+            file = mutagen.File(f)
+            file.filename = str(path)
+
+        return file
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @classmethod
+    def _from_mutagen[F](cls, file: F) -> F | dict[str, Any]:
+        if not isinstance(file, mutagen.FileType):
+            return file
+
+        return dict(file.tags) | dict(path=file.filename)
 
     # noinspection PyNestedDecorators
     @field_validator(
-        "name", "artists", "album", "genres", "track", "disc", "bpm", "key", "released_at", "uri",
+        "name", "album", "bpm", "key", "uri",
+        mode="before", check_fields=False
+    )
+    @staticmethod
+    def _extract_first_value_from_sequence(value: Any) -> str | None:
+        if isinstance(value, tuple | list):
+            value = value[0]
+        return value
+
+    # noinspection PyNestedDecorators
+    @field_validator(
+        "name", "album", "track", "disc", "bpm", "key", "released_at", "uri",
         mode="before", check_fields=False
     )
     @staticmethod
@@ -30,11 +68,11 @@ class LocalTrack[T: mutagen.FileType](LocalResource, Track[LocalArtist, LocalAlb
 
     # noinspection PyNestedDecorators
     @field_validator(
-        "title", "artists", "album", "genres", "track", "disc", "bpm", "key", "released_at", "uri",
+        "name", "artists", "album", "genres", "track", "disc", "bpm", "key", "released_at", "uri",
         mode="before", check_fields=False
     )
     @staticmethod
-    def _convert_null_like_tag_values_to_null(value: Any) -> str | None:
+    def _nullify[T](value: T) -> T | None:
         match value:
             case Collection() if len(value) == 0:
                 return
@@ -45,17 +83,30 @@ class LocalTrack[T: mutagen.FileType](LocalResource, Track[LocalArtist, LocalAlb
 
     # noinspection PyNestedDecorators
     @field_validator(
-        "title", "album", "bpm", "key", "uri",
+        "genres", "comments",
         mode="before", check_fields=False
     )
-    @staticmethod
-    def _extract_first_value_from_sequence(value: Any) -> str | None:
-        if isinstance(value, tuple | list):
-            value = value[0]
-        return value
+    @classmethod
+    def _split_joined_tags[T](cls, value: T) -> T | list[str]:
+        if not isinstance(value, tuple | list) or not all(isinstance(v, str) for v in value):
+            return value
+        return [v for item in value for v in cls._separate_tags(item)]
 
-    def load(self, *args, **kwargs) -> Any:
-        pass
+    # noinspection PyNestedDecorators
+    @field_validator("images", mode="before")
+    @staticmethod
+    def _build_images_from_bytes[T](pictures: T) -> T | list[Image.Image]:
+        if isinstance(pictures, bytes):
+            pictures = [pictures]
+        if not isinstance(pictures, Sequence) or not all(isinstance(pic, bytes) for pic in pictures):
+            return pictures
+
+        return [Image.open(BytesIO(img)) for img in pictures]
+
+    async def load(self) -> Any:
+        model = await self.from_file(self.path)
+        self.__dict__ = model.__dict__
+        del model
 
     def save(self, *args, **kwargs) -> Any:
         pass

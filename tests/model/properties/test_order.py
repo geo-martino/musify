@@ -20,6 +20,18 @@ class TestPosition(MusifyModelTester):
         assert model.total is None
 
     # noinspection PyTestUnpassedFixture
+    def test_from_numbers(self, adapter: TypeAdapter):
+        number = (10,)
+        model = adapter.validate_python(number)
+        assert model.number == 10
+        assert model.total is None
+
+        number = (10, 20, 30)
+        model = adapter.validate_python(number)
+        assert model.number == 10
+        assert model.total == 20
+
+    # noinspection PyTestUnpassedFixture
     def test_from_string(self, adapter: TypeAdapter, faker: Faker):
         numbers = "10"
         model = adapter.validate_python(numbers)

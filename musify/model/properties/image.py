@@ -87,6 +87,6 @@ class ImageLink(MusifyModel):
 class HasImages(_AttributeModel):
     """Represents a resource that has associated images."""
     images: list[InstanceOf[Image.Image] | ImageLink] = Field(
-        description="Images associated with this track.",
+        description="Images associated with this resource.",
         default_factory=list,
     )

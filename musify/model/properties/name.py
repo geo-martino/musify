@@ -10,13 +10,13 @@ from musify.model._base import _AttributeModel
 
 class HasName(_AttributeModel):
     name: StrippedString = Field(
-        description="A name for this object"
+        description="The name of this resource."
     )
 
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @staticmethod
-    def _from_name(value: Any) -> Any:
+    def _from_name[T](value: T) -> T | dict[str, Any]:
         if not isinstance(value, str):
             return value
         return dict(name=value)

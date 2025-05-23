@@ -31,7 +31,7 @@ class SparseDate(MusifyModel):
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @staticmethod
-    def _from_date(value: Any) -> Any:
+    def _from_date[T](value: T) -> T | dict[str, Any]:
         try:
             dt = TypeAdapter(date).validate_python(value)
             return dict(year=dt.year, month=dt.month, day=dt.day)
@@ -43,7 +43,7 @@ class SparseDate(MusifyModel):
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @staticmethod
-    def _from_string(value: Any) -> Any:
+    def _from_string[T](value: T) -> T | dict[str, Any]:
         if not isinstance(value, str):
             return value
 

@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import ClassVar, Self, Annotated
 
 from pydantic import Field, model_validator, PositiveInt, computed_field
 
@@ -47,7 +47,6 @@ class Track[RT: Artist, AT: Album, GT: Genre](
     comments: list[str] | None = Field(
         description="Freeform comments that are associated with this track.",
         default=None,
-        alias="comment",
     )
 
     @model_validator(mode="after")

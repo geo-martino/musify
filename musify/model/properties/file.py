@@ -25,7 +25,7 @@ class _IsFile(_AttributeModel):
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @staticmethod
-    def _determine_format_from_path[T](value: T) -> T | str:
+    def _determine_format_from_path[T](value: T) -> T | dict[str, Any]:
         if not isinstance(value, dict) or "format" in value or (path := value.get("path")) is None:
             return value
         return value | {"format": PurePath(str(path)).suffix.lstrip(".")}

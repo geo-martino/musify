@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "mutagen~=1.47.0",
+    "aiofiles~=24.1.0",
     "aiorequestful~=1.0.20",
     "python-dateutil~=2.9.0",
     "Pillow~=11.2.1",

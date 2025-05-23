@@ -29,6 +29,19 @@ class TagReader[T: mutagen.FileType](TagProcessor, metaclass=ABCMeta):
         """Extract all tag values from file for a given list of tag IDs"""
         values = []
         for tag_id in tag_ids:
+            value = self.file.get(tag_id)
+            if value is None or (isinstance(value, str) and len(value.strip()) == 0):
+                # skip null or empty/blank strings
+                continue
+
+            if isinstance(value, (list, set, tuple)) and all(isinstance(val, str) for val in value):
+                values.extend(v for val in value for v in val.split('\x00'))
+            elif isinstance(value, (list, set, tuple)):
+                values.extend(value)
+            elif isinstance(value, str):
+                values.extend(value.split('\x00'))
+            else:
+                values.append(value)
 
         return values if len(values) > 0 else None
 

@@ -60,7 +60,6 @@ class HasAlbums[T: Album](HasSeparableTags):
     albums: list[T] = Field(
         description="The albums associated with this resource.",
         default=None,
-        validation_alias="album",
     )
 
     # noinspection PyNestedDecorators

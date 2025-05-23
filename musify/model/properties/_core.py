@@ -26,6 +26,6 @@ class HasSeparableTags(_AttributeModel):
         seps = iter(cls._tag_sep)
         tags = tags.split(next(seps))
         for sep in seps:
-            tags = [t for tag in tags for t in tag.split(sep)]
+            tags = [t for tag in tags for t in tag.rstrip(sep).split(sep)]
 
         return tags

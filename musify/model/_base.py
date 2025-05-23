@@ -3,7 +3,7 @@ from collections.abc import Hashable
 from functools import cached_property
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, RootModel, Field, ConfigDict, TypeAdapter
+from pydantic import BaseModel, RootModel, Field, ConfigDict, TypeAdapter, AliasGenerator
 
 
 def abstract_property() -> property:
@@ -55,6 +55,9 @@ class MusifyModel(BaseModel):
         validate_assignment=True,
         validate_by_name=True,
         validate_by_alias=True,
+        alias_generator=AliasGenerator(
+            validation_alias=lambda name: name.replace("_", "").rstrip("s")
+        )
     )
     # TODO: figure this out
     # _clean_tags: dict[TagField, Any] = PrivateAttr(

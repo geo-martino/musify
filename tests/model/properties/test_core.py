@@ -23,5 +23,5 @@ class TestHasSeparableTags(MusifyResourceTester):
 
         seps = ("/", ";")
         HasSeparableTags._tag_sep = ("/", ";")
-        tags_joined = "".join(tag + choice(seps) for tag in tags).rstrip("".join(seps))
+        tags_joined = "".join(tag + choice(seps) for tag in tags)
         assert HasSeparableTags._separate_tags(tags_joined) == tags

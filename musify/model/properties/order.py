@@ -22,15 +22,25 @@ class Position(MusifyModel):
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @staticmethod
-    def _from_number(value: Any) -> Any:
+    def _from_number[T](value: T) -> T | dict[str, Any]:
         if not isinstance(value, int | float):
             return value
         return dict(number=int(value))
 
     # noinspection PyNestedDecorators
     @model_validator(mode="before")
-    @classmethod
-    def _from_string(cls, value: Any) -> Any:
+    @staticmethod
+    def _from_numbers[T](value: T) -> T | dict[str, Any]:
+        if not isinstance(value, tuple | list):
+            return value
+
+        numbers = iter(value)
+        return dict(number=next(numbers, None), total=next(numbers, None))
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @staticmethod
+    def _from_string[T](value: T) -> T | dict[str, Any]:
         if not isinstance(value, str):
             return value
         numbers = iter(value.split("/"))
