@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import date
 from io import BytesIO
 from pathlib import Path
@@ -30,6 +31,10 @@ class TestLocalTrack(UniqueKeyTester):
 
         return file
 
+    @staticmethod
+    def assert_validator_skips[T](func: Callable[[T], T], value: T):
+        assert func(value) is value
+
     async def test_from_file(self, file: mutagen.FileType):
         with (
             mock.patch.object(LocalTrack, "_load_mutagen", return_value=file) as mocked_load
@@ -61,6 +66,14 @@ class TestLocalTrack(UniqueKeyTester):
         result = LocalTrack._from_mutagen(file)
         assert result == tags | dict(path=file.filename)
 
+    # noinspection PyTypeChecker
+    def test_extract_tags_from_mutagen_skips(self, faker: Faker):
+        self.assert_validator_skips(LocalTrack._from_mutagen, None)
+        self.assert_validator_skips(LocalTrack._from_mutagen, faker.pyint())
+        self.assert_validator_skips(LocalTrack._from_mutagen, faker.pytuple())
+        self.assert_validator_skips(LocalTrack._from_mutagen, faker.pylist())
+        self.assert_validator_skips(LocalTrack._from_mutagen, faker.pydict())
+
     def test_extract_first_value_from_sequence(self):
         assert LocalTrack._extract_first_value_from_sequence(None) is None
         assert LocalTrack._extract_first_value_from_sequence("Track name") == "Track name"
@@ -69,19 +82,23 @@ class TestLocalTrack(UniqueKeyTester):
         value = ["Track name", "Artist name"]
         assert LocalTrack._extract_first_value_from_sequence(value) == "Track name"
 
-    def test_extract_first_value_from_sequence_skips(self):
-        assert LocalTrack._extract_first_value_from_single_sequence("Track name") == "Track name"
-        assert LocalTrack._extract_first_value_from_single_sequence(True) is True
+    def test_extract_first_value_from_sequence_skips(self, faker: Faker):
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_sequence, None)
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_sequence, faker.pystr())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_sequence, faker.pyint())
 
     def test_extract_first_value_from_single_sequence(self):
         assert LocalTrack._extract_first_value_from_single_sequence(None) is None
         assert LocalTrack._extract_first_value_from_single_sequence("Track name") == "Track name"
         assert LocalTrack._extract_first_value_from_single_sequence(["Track name"]) == "Track name"
 
-    def test_extract_first_value_from_single_sequence_skips(self):
-        expected = ["Track name", "Artist name"]
-        assert LocalTrack._extract_first_value_from_single_sequence(expected) == expected
-        assert LocalTrack._extract_first_value_from_single_sequence("Track name") == "Track name"
+    def test_extract_first_value_from_single_sequence_skips(self, faker: Faker):
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, None)
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pystr())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pyint())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pytuple())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pylist())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pydict())
 
     def test_nullify(self):
         assert LocalTrack._nullify(None) is None
@@ -91,10 +108,13 @@ class TestLocalTrack(UniqueKeyTester):
         expected = ["12", 20]
         assert LocalTrack._nullify(expected) == expected
 
-    def test_nullify_skips(self):
-        assert LocalTrack._nullify(None) is None
-        assert LocalTrack._nullify([1, 2, 3]) == [1, 2, 3]
-        assert LocalTrack._nullify(("a", "b")) == ("a", "b")
+    def test_nullify_skips(self, faker: Faker):
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, None)
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pystr())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pyint())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pytuple())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pylist())
+        self.assert_validator_skips(LocalTrack._extract_first_value_from_single_sequence, faker.pydict())
 
     def test_split_joined_tags(self, faker: Faker):
         tags = faker.words(nb=faker.random_int(10, 20))
@@ -104,9 +124,11 @@ class TestLocalTrack(UniqueKeyTester):
         assert LocalTrack._split_joined_tags(tags_joined) == tags
 
     def test_split_joined_tags_skips(self, faker: Faker):
-        assert LocalTrack._split_joined_tags(None) is None
-        assert LocalTrack._split_joined_tags([1, 2, 3]) == [1, 2, 3]
-        assert LocalTrack._split_joined_tags(123) == 123
+        self.assert_validator_skips(LocalTrack._split_joined_tags, None)
+        self.assert_validator_skips(LocalTrack._split_joined_tags, faker.pyint())
+        self.assert_validator_skips(LocalTrack._split_joined_tags, faker.pytuple())
+        self.assert_validator_skips(LocalTrack._split_joined_tags, faker.pylist())
+        self.assert_validator_skips(LocalTrack._split_joined_tags, faker.pydict())
 
     def test_build_images_from_bytes(self, faker: Faker):
         data = faker.image()
@@ -117,17 +139,18 @@ class TestLocalTrack(UniqueKeyTester):
         images[0].save(image_bytes, format='PNG')
         assert image_bytes.getvalue() == data
 
-    def test_build_images_from_sequence_of_bytes(self, faker: Faker):
-        data = [faker.image() for _ in range(faker.random_int(3, 5))]
-        images = LocalTrack._build_images_from_bytes(data)
+    def test_build_images_from_sequence_of_bytes(self, images: list[bytes]):
+        data = [choice([img, bytearray(img)]) for img in images]
+        result = LocalTrack._build_images_from_bytes(data)
+        assert result == list(map(Image.open, map(BytesIO, images)))
 
-        images_bytes = []
-        for image in images:
-            image_bytes = BytesIO()
-            image.save(image_bytes, format='PNG')
-            images_bytes.append(image_bytes.getvalue())
-
-        assert images_bytes == data
+    def test_build_images_from_bytes_skips(self, faker: Faker):
+        self.assert_validator_skips(LocalTrack._build_images_from_bytes, None)
+        self.assert_validator_skips(LocalTrack._build_images_from_bytes, faker.pystr())
+        self.assert_validator_skips(LocalTrack._build_images_from_bytes, faker.pyint())
+        self.assert_validator_skips(LocalTrack._build_images_from_bytes, faker.pytuple())
+        self.assert_validator_skips(LocalTrack._build_images_from_bytes, faker.pylist())
+        self.assert_validator_skips(LocalTrack._build_images_from_bytes, faker.pydict())
 
     def test_from_tags(self, faker: Faker):
         sep = choice(LocalTrack._tag_sep)

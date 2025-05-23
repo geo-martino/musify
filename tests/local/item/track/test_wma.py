@@ -1,8 +1,10 @@
+import struct
 from datetime import date
 from io import BytesIO
 from pathlib import Path
 from random import choice
 
+import mutagen.id3
 from PIL import Image
 # noinspection PyProtectedMember
 from mutagen.asf import ASFUnicodeAttribute, ASFByteArrayAttribute
@@ -24,8 +26,13 @@ class TestWMA(UniqueKeyTester):
     def pictures(self, images: list[bytes]) -> list[ASFByteArrayAttribute]:
         pictures = []
         for img in images:
-            picture = ASFByteArrayAttribute()
-            picture.value = img
+            fmt = Image.open(BytesIO(img)).format
+
+            header = struct.pack("<bi", mutagen.id3.PictureType.COVER_FRONT, len(img))
+            header += Image.MIME[fmt].encode("utf-16") + b"\x00\x00"  # mime
+            header += "".encode("utf-16") + b"\x00\x00"  # description
+
+            picture = ASFByteArrayAttribute(header + img)
             pictures.append(picture)
 
         return pictures
@@ -43,7 +50,8 @@ class TestWMA(UniqueKeyTester):
         assert WMA._from_unicode_attributes(attributes) == expected
 
     def test_extract_images(self, images: list[bytes], pictures: list[ASFByteArrayAttribute]):
-        pictures = [choice([pic, pic.value]) for pic in pictures]
+        pictures = [choice([img, pic]) for img, pic in zip(images, pictures)]
+        print(type(pictures[0]))
         assert WMA._extract_images(pictures[0]) == [images[0]]
         assert WMA._extract_images(pictures) == images
 
@@ -84,16 +92,3 @@ class TestWMA(UniqueKeyTester):
         assert model.released_at == date(2023, 4, 14)
         assert model.comments == ["spotify:track:1WjgFpSxwA0Bqyr7hWc3f1"]
         assert model.images == list(map(Image.open, map(BytesIO, images)))
-
-    async def test_load(self):
-        path = Path("/Volumes/Media/Music/Little Shop of Horrors - 2003 Broadway Revival Cast/1-01 - Prologue - Little Shop of Horrors.wma")
-        for field in await WMA.from_file(path=path):
-            print(*field)
-        raise
-
-    async def test_load_old(self):
-        from musify.libraries.local.track.wma import WMA
-        path = Path("/Volumes/Media/Music/Little Shop of Horrors - 2003 Broadway Revival Cast/1-01 - Prologue - Little Shop of Horrors.wma")
-        file = WMA(path)
-        await file.load()
-        raise

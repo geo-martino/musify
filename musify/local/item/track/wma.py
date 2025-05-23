@@ -1,8 +1,10 @@
 import struct
 from collections.abc import Iterable
+from io import BytesIO
 
 import mutagen.asf
-from PIL import Image
+import mutagen.id3
+from PIL import Image, UnidentifiedImageError
 from pydantic import Field, AliasChoices, PositiveFloat, InstanceOf, field_validator
 
 from musify.local.item.album import LocalAlbum
@@ -120,8 +122,16 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
             if isinstance(attribute, mutagen.asf.ASFByteArrayAttribute):
                 attribute = attribute.value
 
-            v_type, v_size = struct.unpack_from(b"<bi", attribute)
+            id3_type, size = struct.unpack_from(b"<bi", attribute)
+            id3_types = {
+                int(val) for val in vars(mutagen.id3.PictureType).values() if isinstance(val, mutagen.id3.PictureType)
+            }
+            if id3_type not in id3_types:
+                # bytes does not have WMA-spec header, assume bytes are raw image data
+                values_converted.append(attribute)
+                continue
 
+            # extract WMA-spec header information
             pos = 5
             mime = b""
             while attribute[pos:pos + 2] != b"\x00\x00":
@@ -136,7 +146,10 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
                 pos += 2
             pos += 2
 
-            attribute_bytes = attribute[pos:pos + v_size]
+            print(id3_type, size, pos)
+            print(attribute[:pos])
+
+            attribute_bytes = attribute[pos:pos + size]
             values_converted.append(attribute_bytes)
 
         return values_converted

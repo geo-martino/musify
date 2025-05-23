@@ -96,9 +96,9 @@ class LocalTrack[T: mutagen.FileType](LocalResource, Track[LocalArtist, LocalAlb
     @field_validator("images", mode="before")
     @staticmethod
     def _build_images_from_bytes[T](pictures: T) -> T | list[Image.Image]:
-        if isinstance(pictures, bytes):
+        if isinstance(pictures, bytes | bytearray):
             pictures = [pictures]
-        if not isinstance(pictures, Sequence) or not all(isinstance(pic, bytes) for pic in pictures):
+        if not isinstance(pictures, Sequence) or not all(isinstance(pic, bytes | bytearray) for pic in pictures):
             return pictures
 
         return [Image.open(BytesIO(img)) for img in pictures]
