@@ -4,7 +4,6 @@ from typing import Any, get_args, _UnionGenericAlias
 
 import mutagen.flac
 from pydantic import Field, AliasChoices, model_validator, field_validator
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler, ValidationInfo
 
 from musify.local.item.track import LocalTrack
 from musify.model.properties.date import SparseDate

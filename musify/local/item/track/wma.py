@@ -1,10 +1,9 @@
 import struct
 from collections.abc import Iterable
-from io import BytesIO
 
 import mutagen.asf
 import mutagen.id3
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from pydantic import Field, AliasChoices, PositiveFloat, InstanceOf, field_validator
 
 from musify.local.item.album import LocalAlbum
@@ -145,9 +144,6 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
                 description += attribute[pos:pos + 2]
                 pos += 2
             pos += 2
-
-            print(id3_type, size, pos)
-            print(attribute[:pos])
 
             attribute_bytes = attribute[pos:pos + size]
             values_converted.append(attribute_bytes)

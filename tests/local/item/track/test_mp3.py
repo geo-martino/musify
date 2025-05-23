@@ -1,8 +1,6 @@
-import unittest
 from copy import deepcopy
 from datetime import date
 from io import BytesIO
-from pathlib import Path
 from random import choice
 
 import mutagen.id3

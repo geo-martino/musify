@@ -1,13 +1,11 @@
 from datetime import date
 from io import BytesIO
-from pathlib import Path
 from random import choice
 
-from PIL import Image
-from mutagen.mp4 import MP4FreeForm, MP4Cover
 import pytest
+from PIL import Image
 from faker import Faker
-from uri_template import expand
+from mutagen.mp4 import MP4FreeForm, MP4Cover
 
 from musify.local.item.track.m4a import M4A
 from musify.model import MusifyModel

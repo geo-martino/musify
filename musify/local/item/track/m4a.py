@@ -1,10 +1,6 @@
-from collections.abc import Iterable
-from io import BytesIO
-
 import mutagen.mp4
 from PIL import Image
 from pydantic import Field, AliasChoices, PositiveFloat, InstanceOf, field_validator
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler
 
 from musify.local.item.album import LocalAlbum
 from musify.local.item.artist import LocalArtist

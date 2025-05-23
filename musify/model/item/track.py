@@ -1,4 +1,4 @@
-from typing import ClassVar, Self, Annotated
+from typing import ClassVar, Self
 
 from pydantic import Field, model_validator, PositiveInt, computed_field
 

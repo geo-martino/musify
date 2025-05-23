@@ -1,15 +1,14 @@
 import struct
 from datetime import date
 from io import BytesIO
-from pathlib import Path
 from random import choice
 
 import mutagen.id3
+import pytest
 from PIL import Image
+from faker import Faker
 # noinspection PyProtectedMember
 from mutagen.asf import ASFUnicodeAttribute, ASFByteArrayAttribute
-import pytest
-from faker import Faker
 
 from musify.local.item.track.wma import WMA
 from musify.model import MusifyModel
@@ -51,7 +50,6 @@ class TestWMA(UniqueKeyTester):
 
     def test_extract_images(self, images: list[bytes], pictures: list[ASFByteArrayAttribute]):
         pictures = [choice([img, pic]) for img, pic in zip(images, pictures)]
-        print(type(pictures[0]))
         assert WMA._extract_images(pictures[0]) == [images[0]]
         assert WMA._extract_images(pictures) == images
 
