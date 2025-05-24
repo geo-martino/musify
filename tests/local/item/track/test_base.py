@@ -182,3 +182,22 @@ class TestLocalTrack(UniqueKeyTester):
         assert model.key.key == "B"
         assert model.released_at == date(2023, 4, 14)
         assert model.comments == tags["comment"]
+
+    async def test_load(self, model: LocalTrack, faker: Faker):
+        expected = LocalTrack(
+            name=faker.sentence(),
+            artists=faker.pylist(allowed_types=[str]),
+            album=faker.word(),
+            genres=faker.pylist(allowed_types=[str]),
+            path=model.path,
+        )
+
+        with mock.patch.object(LocalTrack, "from_file", return_value=expected) as mocked_load:
+            await model.load()
+
+            mocked_load.assert_called_once_with(model.path)
+            assert model is not expected
+            assert model.name == expected.name
+            assert model.artists == expected.artists
+            assert model.album == expected.album
+            assert model.genres == expected.genres
