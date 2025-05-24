@@ -39,13 +39,11 @@ class TestWMA(UniqueKeyTester):
     def test_from_unicode_attribute(self, faker: Faker):
         expected = faker.sentence()
         attribute = ASFUnicodeAttribute(expected)
-
         assert WMA._from_unicode_attribute(attribute) == expected
 
     def test_from_unicode_attributes(self, faker: Faker):
         expected = [faker.sentence() for _ in range(faker.random_int(3, 6))]
         attributes = [ASFUnicodeAttribute(item) for item in expected]
-
         assert WMA._from_unicode_attributes(attributes) == expected
 
     def test_extract_images(self, images: list[bytes], pictures: list[ASFByteArrayAttribute]):

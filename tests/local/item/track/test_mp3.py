@@ -29,12 +29,6 @@ class TestMP3(UniqueKeyTester):
 
         return data
     
-    @staticmethod
-    def to_text_frame[T: mutagen.id3.TextFrame](value: str, cls: type[T] = mutagen.id3.TextFrame) -> T:
-        obj = cls()
-        obj.text = value
-        return obj
-    
     def test_merge_suffixed_tag_keys(self, faker: Faker):
         data: dict[str, str | bytes | list] = {
             "TIT2": "Track title",
@@ -56,12 +50,12 @@ class TestMP3(UniqueKeyTester):
 
     def test_from_text_frame(self, faker: Faker):
         expected = faker.pystr()
-        data = self.to_text_frame(expected)
+        data = mutagen.id3.TextFrame(text=expected)
         assert MP3._from_text_frame(data) == expected
 
     def test_from_text_frames(self, faker: Faker):
         expected = [faker.pystr() for _ in range(faker.random_int(3, 6))]
-        data = [self.to_text_frame(item) for item in expected]
+        data = [mutagen.id3.TextFrame(text=item) for item in expected]
         assert MP3._from_text_frame(data) == expected
 
     def test_extract_images(self, images: list[bytes], pictures: list[mutagen.id3.APIC], faker: Faker):
@@ -72,24 +66,18 @@ class TestMP3(UniqueKeyTester):
     def test_from_tags(self, images: list[bytes], pictures: list[mutagen.id3.APIC], faker: Faker):
         sep = choice(MP3._tag_sep)
         tags = {
-            "TIT2": self.to_text_frame("Sleepwalk My Life Away", mutagen.id3.TIT2),
-            "TPE1": self.to_text_frame("Metallica", mutagen.id3.TPE1),
-            "TALB": self.to_text_frame("72 Seasons", mutagen.id3.TALB),
-            "TPE2": self.to_text_frame("Metallica", mutagen.id3.TPE2),
-            "TCON": self.to_text_frame(sep.join(("Hard Rock", "Metal", "Rock", "Thrash Metal")), mutagen.id3.TCON),
-            "TRCK": self.to_text_frame("04", mutagen.id3.TRCK),
-            "TPOS": self.to_text_frame("1/2", mutagen.id3.TPOS),
-            "TBPM": self.to_text_frame("124.931", mutagen.id3.TBPM),
-            "TKEY": self.to_text_frame("B", mutagen.id3.TKEY),
-            choice(("TDRC", "TDAT", "TDOR", "TYER", "TORY")): self.to_text_frame(
-                "2023-04-14", mutagen.id3.TDRC
-            ),
-            choice(("COMM", "COMMENT")) + ":ID3V1 COMMENT:eng": self.to_text_frame(
-                faker.sentence(), mutagen.id3.COMM
-            ),
-            choice(("COMM", "COMMENT")) + ":URI:eng": self.to_text_frame(
-                "spotify:track:1WjgFpSxwA0Bqyr7hWc3f1", mutagen.id3.COMM
-            ),
+            "TIT2": mutagen.id3.TIT2(text="Sleepwalk My Life Away"),
+            "TPE1": mutagen.id3.TPE1(text="Metallica"),
+            "TALB": mutagen.id3.TALB(text="72 Seasons"),
+            "TPE2": mutagen.id3.TPE2(text="Metallica"),
+            "TCON": mutagen.id3.TCON(text=sep.join(("Hard Rock", "Metal", "Rock", "Thrash Metal"))),
+            "TRCK": mutagen.id3.TRCK(text="04"),
+            "TPOS": mutagen.id3.TPOS(text="1/2"),
+            "TBPM": mutagen.id3.TBPM(text="124.931"),
+            "TKEY": mutagen.id3.TKEY(text="B"),
+            choice(("TDRC", "TDAT", "TDOR", "TYER", "TORY")): mutagen.id3.TDRC(text="2023-04-14"),
+            choice(("COMM", "COMMENT")) + ":ID3V1 COMMENT:eng": mutagen.id3.COMM(text=faker.sentence()),
+            choice(("COMM", "COMMENT")) + ":URI:eng": mutagen.id3.COMM(text="spotify:track:1WjgFpSxwA0Bqyr7hWc3f1"),
             "APIC:Cover Front": pictures[0],
             "APIC:Cover Back": pictures[1],
             "APIC": pictures[2:],

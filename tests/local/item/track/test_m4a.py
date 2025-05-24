@@ -21,13 +21,11 @@ class TestM4A(UniqueKeyTester):
     def test_from_free_form_field(self, faker: Faker):
         expected = faker.pystr()
         field = MP4FreeForm(expected.encode())
-
         assert M4A._from_free_form_field(field) == expected
 
     def test_from_free_form_fields(self, faker: Faker):
         expected = [faker.sentence() for _ in range(faker.random_int(3, 6))]
         attributes = [MP4FreeForm(item.encode()) for item in expected]
-
         assert M4A._from_free_form_fields(attributes) == expected
 
     def test_from_tags(self, images: list[bytes], faker: Faker):
