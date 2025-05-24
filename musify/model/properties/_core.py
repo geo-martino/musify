@@ -28,4 +28,4 @@ class HasSeparableTags(_AttributeModel):
         for sep in seps:
             tags = [t for tag in tags for t in tag.rstrip(sep).split(sep)]
 
-        return tags
+        return [tag for tag in tags if tag]

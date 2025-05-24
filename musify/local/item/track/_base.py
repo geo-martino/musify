@@ -5,7 +5,8 @@ from typing import Self, Any
 
 import mutagen
 from PIL import Image
-from pydantic import field_validator, model_validator, validate_call
+from pydantic import field_validator, model_validator, validate_call, field_serializer
+from pydantic_core.core_schema import SerializerFunctionWrapHandler, FieldSerializationInfo
 
 from musify.local._base import LocalResource
 from musify.local.item.album import LocalAlbum
@@ -13,10 +14,13 @@ from musify.local.item.artist import LocalArtist
 from musify.local.item.genre import LocalGenre
 from musify.model.item.track import Track
 from musify.model.properties.file import IsFile
+from musify.model.properties.image import ImageLink
 from musify.model.properties.uri import HasMutableURI
 
 
 class LocalTrack[T: mutagen.FileType](LocalResource, Track[LocalArtist, LocalAlbum, LocalGenre], IsFile, HasMutableURI):
+    __tags_deleted: set[str] = set()
+
     @classmethod
     @validate_call
     async def from_file(cls, path: str | Path) -> Self:
@@ -92,21 +96,22 @@ class LocalTrack[T: mutagen.FileType](LocalResource, Track[LocalArtist, LocalAlb
             return value
         return [v for item in value for v in cls._separate_tags(item)]
 
-    # noinspection PyNestedDecorators
-    @field_validator("images", mode="before")
-    @staticmethod
-    def _build_images_from_bytes[T](pictures: T) -> T | list[Image.Image]:
-        if isinstance(pictures, bytes | bytearray):
-            pictures = [pictures]
-        if not isinstance(pictures, Sequence) or not all(isinstance(pic, bytes | bytearray) for pic in pictures):
-            return pictures
-
-        return [Image.open(BytesIO(img)) for img in pictures]
-
     async def load(self) -> Any:
         model = await self.from_file(self.path)
         self.__dict__ = model.__dict__
         del model
 
-    def save(self, *args, **kwargs) -> Any:
-        pass
+    async def save(self, *args, **kwargs) -> Any:
+        pass  # TODO
+
+    async def clear_tags(self) -> None:
+        pass  # TODO
+
+    def __setattr__(self, key: str, value: Any):
+        if value is None:
+            self.__tags_deleted.add(key)
+        super().__setattr__(key, value)
+
+    def __delattr__(self, item: str):
+        self.__tags_deleted.add(item)
+        super().__delattr__(item)

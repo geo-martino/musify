@@ -2,7 +2,7 @@ import datetime
 import itertools
 import re
 import string
-from collections.abc import Collection, Iterator
+from collections.abc import Collection, Iterator, Callable
 from pathlib import Path
 from random import choice, randrange, sample
 from typing import Any, Self
@@ -187,3 +187,7 @@ class SimpleURI(URI):
 
         uri = ":".join((cls._source, *value.path.split("/")[:-2]))
         return handler(uri)
+
+
+def assert_validator_skips[T](func: Callable[[T], T], value: T):
+    assert func(value) is value

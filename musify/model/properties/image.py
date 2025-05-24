@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Sequence
 from http import HTTPMethod
 from io import BytesIO
 from typing import Any, Self
 
 import aiohttp
 from PIL import Image
-from pydantic import InstanceOf, Field, PositiveInt, field_validator
+from pydantic import InstanceOf, Field, PositiveInt, field_validator, field_serializer
+from pydantic_core.core_schema import SerializerFunctionWrapHandler, FieldSerializationInfo
 from yarl import URL
 
 from musify._types import StrippedString
+from musify.exception import MusifyTypeError
 from musify.model import MusifyModel
 from musify.model._base import _AttributeModel
 
@@ -90,3 +94,35 @@ class HasImages(_AttributeModel):
         description="Images associated with this resource.",
         default_factory=list,
     )
+
+    # noinspection PyNestedDecorators
+    @field_validator("images", mode="before")
+    @staticmethod
+    def _images_from_bytes[T](data: T) -> T | list[Image.Image]:
+        if isinstance(data, bytes | bytearray):
+            data = [data]
+        if isinstance(data, str) or not isinstance(data, Sequence):
+            return data
+
+        return [Image.open(BytesIO(img)) if isinstance(img, bytes | bytearray) else img for img in data]
+
+    # noinspection PyNestedDecorators
+    @field_serializer("images", mode="wrap", when_used="unless-none")
+    @staticmethod
+    def _bytes_from_images(
+            images: list[Image.Image | ImageLink],
+            handler: SerializerFunctionWrapHandler,
+            info: FieldSerializationInfo,
+    ) -> list[bytes]:
+        data: list[bytes] = []
+        for img in images:
+            if isinstance(img, ImageLink):
+                loop = asyncio.get_event_loop()
+                img = loop.run_until_complete(img.load())
+
+            img_bytes = BytesIO()
+            img.save(img_bytes, format=img.format)
+            img_bytes = img_bytes.getvalue()
+            data.append(img_bytes)
+
+        return handler(data)

@@ -1,6 +1,7 @@
 from random import choice
 
 import pytest
+from faker import Faker
 
 from musify.model import MusifyModel
 from musify.model.properties import HasSeparableTags
@@ -12,14 +13,14 @@ class TestHasSeparableTags(MusifyResourceTester):
     def model(self) -> MusifyModel:
         return HasSeparableTags()
 
-    def test_join_tags(self) -> None:
-        tags = [f"tag{i}" for i in range(10)]
+    def test_join_tags(self, faker: Faker) -> None:
+        tags = faker.words(nb=faker.random_int(10, 20))
 
         HasSeparableTags._tag_sep = ("/", ";")
         assert HasSeparableTags._join_tags(tags) == "/".join(tags), "Should only join on first item in the sequence"
 
-    def test_separate_tags(self) -> None:
-        tags = [f"tag{i}" for i in range(10)]
+    def test_separate_tags(self, faker: Faker) -> None:
+        tags = faker.words(nb=faker.random_int(10, 20))
 
         seps = ("/", ";")
         HasSeparableTags._tag_sep = ("/", ";")

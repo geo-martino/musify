@@ -32,13 +32,13 @@ def writeable_computed_field(name: str) -> property:
     name = f"__{name.lstrip("_")}"
 
     def fget(self) -> Any:
-        field = self.model_computed_fields[name.lstrip("_")]
+        field = self.__class__.model_computed_fields[name.lstrip("_")]
         value = getattr(self, name, None)
         TypeAdapter(field.return_type).validate_python(value)  # validate return
         return value
 
     def fset(self, value) -> None:
-        field = self.model_computed_fields[name.lstrip("_")]
+        field = self.__class__.model_computed_fields[name.lstrip("_")]
         value = TypeAdapter(field.return_type).validate_python(value)
         setattr(self, name, value)
 
@@ -68,8 +68,8 @@ class MusifyModel(BaseModel):
     def __init__(self, **kwargs):
         # Allow setting writeable computed fields on init
         computed_field_values = {}
-        for field in self.model_computed_fields.keys():
-            if field in self.__pydantic_fields__ or field not in kwargs:
+        for field in self.__class__.model_computed_fields.keys():
+            if field in self.__class__.model_fields or field not in kwargs:
                 continue
 
             attr = getattr(self.__class__, field)
