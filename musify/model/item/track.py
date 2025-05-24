@@ -21,7 +21,7 @@ from musify.model.sequence import MusifyMutableSequence, MusifySequence
 class Track[RT: Artist, AT: Album, GT: Genre](
     HasArtists[RT], HasAlbum[AT], HasGenres[GT], HasName, HasURI, HasLength, HasRating, HasReleaseDate, HasImages
 ):
-    """Represents a track item and its properties."""
+    """Represents a track resource and its properties."""
     type: ClassVar[str] = "track"
 
     name: StrippedString = Field(

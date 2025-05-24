@@ -58,7 +58,7 @@ class M4A(LocalTrack[mutagen.mp4.MP4]):
         validation_alias="----:com.apple.iTunes:INITIALKEY"
     )
     released_at: SparseDate | None = Field(
-        description="The date this item was released.",
+        description="The date this track was released.",
         default=None,
         validation_alias="©day"
     )

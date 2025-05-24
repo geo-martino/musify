@@ -140,14 +140,14 @@ class HasMutableURI(HasURI):
 
     source: str | None = Field(
         description=(
-            "The type of remote repository this item is associated with. "
+            "The type of remote repository this resource is associated with. "
             "This is used to extract the appropriate URI from a list of available URIs "
             "and validate incoming URIs contain one URI from the correct source."
         ),
         default=None,
     )
     uris: list[URI] = Field(
-        description="A list of URIs that represent this item.",
+        description="A list of URIs that represent this resource.",
         default_factory=list,
     )
 
@@ -201,7 +201,7 @@ class HasMutableURI(HasURI):
 
     @computed_field(
         description=(
-                "Whether this item has a URI. Returns None if existence is unknown "
+                "Whether this resource has a URI. Returns None if existence is unknown "
                 "(usually because a mapping has not yet been attempted)."
         )
     )

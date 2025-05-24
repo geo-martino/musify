@@ -62,9 +62,9 @@ class MP3(LocalTrack[mutagen.mp3.MP3]):
         validation_alias="TKEY"
     )
     released_at: SparseDate | None = Field(
-        description="The date this item was released.",
+        description="The date this track was released.",
         default=None,
-        validation_alias=AliasChoices("TDRC", "TDAT", "TDOR", "TYER", "TORY")
+        validation_alias=AliasChoices("TDAT", "TDOR", "TYER", "TORY", "TDRC")
     )
     comments: list[str] | None = Field(
         description="Freeform comments that are associated with this track.",

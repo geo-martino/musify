@@ -62,7 +62,7 @@ class WMA(LocalTrack[mutagen.asf.ASF]):
         validation_alias="WM/InitialKey"
     )
     released_at: SparseDate | None = Field(
-        description="The date this item was released.",
+        description="The date this track was released.",
         default=None,
         validation_alias=AliasChoices("WM/Year", "WM/OriginalReleaseYear")
     )

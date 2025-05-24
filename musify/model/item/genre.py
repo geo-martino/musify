@@ -8,7 +8,7 @@ from musify.model.properties.name import HasName
 
 
 class Genre(HasName):
-    """Represents a genre item and its properties."""
+    """Represents a genre resource and its properties."""
     __unique_attributes__ = frozenset({"name"})
 
     type: ClassVar[str] = "genre"

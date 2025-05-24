@@ -11,7 +11,7 @@ from musify.model.properties.uri import HasURI
 
 
 class _Artist[GT: Genre](HasGenres[GT], HasName, HasURI, HasRating):
-    """Represents an artist item and its properties."""
+    """Represents an artist resource and its properties."""
     type: ClassVar[str] = "artist"
 
     name: StrippedString = Field(

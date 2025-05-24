@@ -22,7 +22,7 @@ class FLAC(LocalTrack[mutagen.flac.FLAC]):
         validation_alias=AliasChoices("discnumber", "disctotal")
     )
     released_at: SparseDate | None = Field(
-        description="The date this item was released.",
+        description="The date this track was released.",
         default=None,
         validation_alias=AliasChoices("date", "release date", "year")
     )

@@ -96,7 +96,7 @@ class MusifyRootModel[T](RootModel[T]):
 
 
 class MusifyResource(MusifyModel):
-    """Generic class for storing an item."""
+    """Generic class for storing attributes relating to some resource."""
     __unique_attributes__: ClassVar[frozenset[str]] = frozenset()
     type: ClassVar[str] = Field(description="The type of resource this is.")
 
