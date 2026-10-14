@@ -1,5 +1,9 @@
 # Musify
 
+> [!CAUTION]
+> ### Project Abandoned
+> Development on this project has stopped in favor of [beets](https://beets.io/). Beets is significantly more mature, feature-complete, and actively maintained. Please use beets instead.
+
 [![PyPI Version](https://img.shields.io/pypi/v/musify?logo=pypi&label=Latest%20Version)](https://pypi.org/project/musify)
 [![Python Version](https://img.shields.io/pypi/pyversions/musify.svg?logo=python&label=Supported%20Python%20Versions)](https://pypi.org/project/musify/)
 [![Documentation](https://img.shields.io/badge/Documentation-red.svg)](https://geo-martino.github.io/musify/)
